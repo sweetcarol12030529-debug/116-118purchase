@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 深耕計畫採購案追蹤系統 🚀</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Chart.js 用於酷炫數據視覺化 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入 SheetJS (xlsx) 用於讀取與解析 Excel 檔案 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 引入 Google Fonts (Noto Sans TC) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 3s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-6px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 自定義滾動條與毛玻璃特效 */
+        body {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 45%, #a7f3d0 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1), 0 8px 10px -6px rgba(16, 185, 129, 0.1);
+        }
+        .glass-header {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.95) 100%);
+            backdrop-filter: blur(10px);
+        }
+        /* 自定義捲軸 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #ecfdf5;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #6ee7b7;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #34d399;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-emerald-300 selection:text-emerald-900 pb-12">
+
+    <!-- 進入網頁前的強制登入驗證畫面 (Login Gate) -->
+    <div id="loginOverlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gradient-to-br from-emerald-900/95 via-teal-900/95 to-emerald-950/95 backdrop-blur-md">
+        <div class="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-emerald-300/60 overflow-hidden transform transition-all">
+            <!-- 登入卡片頂部視覺 -->
+            <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-7 text-center text-white relative overflow-hidden">
+                <div class="text-5xl mb-2 animate-float">🌱</div>
+                <h2 class="text-2xl font-black tracking-wider">深耕計畫採購案追蹤系統</h2>
+                <p class="text-xs font-bold text-emerald-100 mt-1">🔐 請先登入系統以驗證操作權限</p>
+            </div>
+
+            <!-- 登入表單 -->
+            <form id="loginForm" onsubmit="handleLogin(event)" class="p-6 sm:p-8 space-y-5">
+                <div>
+                    <label class="block text-xs font-extrabold text-emerald-950 mb-1.5">👤 登入帳號</label>
+                    <input type="text" id="loginUsername" required autocomplete="username" oninput="checkPasswordMatch()" placeholder="請輸入帳號 (admin 或 使用者1~3)"
+                        class="w-full px-4 py-3 rounded-2xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-emerald-50/40 font-bold text-slate-800">
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-extrabold text-emerald-950">🔑 登入密碼</label>
+                        <span id="passwordMatchBadge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full hidden"></span>
+                    </div>
+                    <div class="relative flex items-center">
+                        <input type="password" id="loginPassword" required autocomplete="current-password" oninput="checkPasswordMatch()" placeholder="請輸入密碼"
+                            class="w-full pl-4 pr-20 py-3 rounded-2xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-emerald-50/40 font-bold text-slate-800 transition-colors">
+                        <!-- 即時對錯圖示與顯示/隱藏切換按鈕 -->
+                        <div class="absolute right-3 flex items-center gap-1.5">
+                            <span id="passwordStatusIcon" class="text-base select-none hidden" title="密碼驗證狀態"></span>
+                            <button type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility()" title="顯示/隱藏密碼"
+                                class="p-1.5 rounded-xl text-slate-500 hover:text-emerald-700 hover:bg-emerald-100/80 transition-colors cursor-pointer text-sm">
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 錯誤訊息提示 -->
+                <div id="loginErrorMsg" class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5">
+                    <span>⚠️</span> <span>帳號或密碼錯誤，請重新輸入！</span>
+                </div>
+
+                <button type="submit" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-base shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-2">
+                    <span>🚀</span> 登入系統
+                </button>
+
+                <!-- 權限提示卡片 -->
+                <div class="pt-3 border-t border-emerald-100 grid grid-cols-2 gap-2 text-[11px] text-slate-500">
+                    <div class="bg-amber-50/80 border border-amber-200/70 rounded-xl p-2.5">
+                        <div class="font-extrabold text-amber-900">👑 管理者</div>
+                        <div class="mt-0.5">完整權限 / 帳號管理</div>
+                    </div>
+                    <div class="bg-emerald-50/80 border border-emerald-200/70 rounded-xl p-2.5">
+                        <div class="font-extrabold text-emerald-900">🔍 一般使用者</div>
+                        <div class="mt-0.5">僅限 新增 / 修改</div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 頂部導覽列 -->
+    <header class="glass-header text-white sticky top-0 z-30 shadow-lg border-b border-emerald-400/30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="text-4xl animate-float bg-white/20 p-2 rounded-2xl shadow-inner">🌱</div>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-black tracking-wider flex items-center gap-2">
+                        深耕計畫採購案追蹤系統
+                        <span class="text-xl sm:text-2xl">✨</span>
+                    </h1>
+                    <p class="text-emerald-100 text-xs sm:text-sm font-medium mt-0.5">
+                        即時掌握採購進度、預算級距與核銷狀態的智慧戰情室 🚀
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
+                <!-- 目前登入身分徽章 -->
+                <div id="roleBadge" class="w-full sm:w-auto bg-white/20 text-white border border-white/40 font-extrabold px-4 py-2.5 rounded-2xl shadow-md flex items-center justify-center gap-1.5 text-sm">
+                    <span id="roleIcon" class="text-base">🔍</span>
+                    <span id="roleLabel">使用者1</span>
+                </div>
+
+                <button onclick="fetchFromGoogleSheet(true)" class="w-full sm:w-auto bg-emerald-700/80 hover:bg-emerald-800 text-white border border-emerald-300/50 font-bold px-4 py-2.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm" title="從 Google Sheets 拉取最新資料">
+                    <span class="text-base">🔄</span> 同步雲端資料
+                </button>
+                <button id="btnUserManage" onclick="openUserManageModal()" class="hidden w-full sm:w-auto bg-amber-500/95 hover:bg-amber-600 text-slate-900 border border-amber-200 font-extrabold px-4 py-2.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm">
+                    <span class="text-base">👥</span> 使用者管理
+                </button>
+                <button id="btnExcelImport" onclick="openExcelModal()" class="hidden w-full sm:w-auto bg-teal-600/90 hover:bg-teal-700 text-white border border-teal-300/50 font-bold px-4 py-2.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm">
+                    <span class="text-base">📥</span> Excel 匯入
+                </button>
+                <button onclick="openModal()" class="w-full sm:w-auto bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-slate-900 font-extrabold px-5 py-2.5 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer">
+                    <span class="text-xl">➕</span> 新增採購案件
+                </button>
+                <button onclick="handleLogout()" class="w-full sm:w-auto bg-rose-500/90 hover:bg-rose-600 text-white border border-rose-300/40 font-bold px-4 py-2.5 rounded-2xl shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm" title="登出系統">
+                    <span class="text-base">🚪</span> 登出
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主內容區 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
+
+        <!-- 1. 分析儀表板區塊 -->
+        <section aria-label="分析儀表板" class="space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h2 class="text-xl sm:text-2xl font-extrabold text-emerald-950 flex items-center gap-2">
+                    <span class="text-2xl">📊</span> 採購戰情分析儀表板
+                </h2>
+                <div class="flex items-center gap-2">
+                    <span id="lastUpdatedDisplay" class="text-xs font-bold text-emerald-900 bg-white/80 border border-emerald-200 px-3 py-1.5 rounded-full shadow-2xs">
+                        🕒 最後更新：尚未更新
+                    </span>
+                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-200/70 px-3 py-1.5 rounded-full">
+                        🔄 即時自動更新
+                    </span>
+                </div>
+            </div>
+
+            <!-- KPI 數據卡片網格 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <!-- 總案件數 -->
+                <div class="glass-card rounded-3xl p-5 hover:scale-[1.02] transition-transform duration-200 relative overflow-hidden group">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-15 group-hover:scale-110 transition-transform">📦</div>
+                    <p class="text-sm font-bold text-emerald-700">總採購案件數</p>
+                    <div class="flex items-baseline gap-2 mt-2">
+                        <span id="kpi-total" class="text-4xl font-black text-emerald-950">0</span>
+                        <span class="text-sm font-bold text-emerald-600">件</span>
+                    </div>
+                    <div class="mt-3 text-xs font-medium text-slate-500 flex items-center gap-1">
+                        <span>🚀</span> 涵蓋所有範疇與子計畫
+                    </div>
+                </div>
+
+                <!-- 150萬以上大額採購 -->
+                <div class="glass-card rounded-3xl p-5 hover:scale-[1.02] transition-transform duration-200 relative overflow-hidden group border-l-4 border-l-amber-400">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-15 group-hover:scale-110 transition-transform">💎</div>
+                    <p class="text-sm font-bold text-amber-700">150萬以上 (巨額/公告)</p>
+                    <div class="flex items-baseline gap-2 mt-2">
+                        <span id="kpi-over150" class="text-4xl font-black text-amber-600">0</span>
+                        <span class="text-sm font-bold text-amber-600">件</span>
+                    </div>
+                    <div class="mt-3 text-xs font-medium text-slate-500 flex items-center gap-1">
+                        <span>🔥</span> 重點列管高金額採購案
+                    </div>
+                </div>
+
+                <!-- 進行中案件 -->
+                <div class="glass-card rounded-3xl p-5 hover:scale-[1.02] transition-transform duration-200 relative overflow-hidden group border-l-4 border-l-sky-400">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-15 group-hover:scale-110 transition-transform">⚡</div>
+                    <p class="text-sm font-bold text-sky-700">進行中案件 (未結案)</p>
+                    <div class="flex items-baseline gap-2 mt-2">
+                        <span id="kpi-active" class="text-4xl font-black text-sky-600">0</span>
+                        <span class="text-sm font-bold text-sky-600">件</span>
+                    </div>
+                    <div class="mt-3 text-xs font-medium text-slate-500 flex items-center gap-1">
+                        <span>🏃‍♂️</span> 包含送單、詢議價至核銷中
+                    </div>
+                </div>
+
+                <!-- 已結案達成率 -->
+                <div class="glass-card rounded-3xl p-5 hover:scale-[1.02] transition-transform duration-200 relative overflow-hidden group border-l-4 border-l-emerald-500">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-15 group-hover:scale-110 transition-transform">🏆</div>
+                    <p class="text-sm font-bold text-emerald-700">已結案達成率</p>
+                    <div class="flex items-baseline gap-2 mt-2">
+                        <span id="kpi-rate" class="text-4xl font-black text-emerald-600">0%</span>
+                        <span id="kpi-closed-count" class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">0 件結案</span>
+                    </div>
+                    <div class="w-full bg-emerald-100 rounded-full h-2 mt-3 overflow-hidden">
+                        <div id="kpi-progress-bar" class="bg-gradient-to-r from-emerald-400 to-teal-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 圖表視覺化區塊 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 各狀態案件分佈長條圖 -->
+                <div class="glass-card rounded-3xl p-6 lg:col-span-2 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-extrabold text-emerald-950 flex items-center gap-2">
+                            <span>📈</span> 各採購階段狀態分佈
+                        </h3>
+                        <span class="text-xs text-slate-500">追蹤瓶頸與進度推進</span>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 採購金額級距圓餅圖 -->
+                <div class="glass-card rounded-3xl p-6 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-extrabold text-emerald-950 flex items-center gap-2">
+                            <span>💰</span> 採購金額級距佔比
+                        </h3>
+                        <span class="text-xs text-slate-500">150萬門檻分析</span>
+                    </div>
+                    <div class="relative h-64 w-full flex items-center justify-center">
+                        <canvas id="budgetChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 搜尋與篩選控制列 -->
+        <section class="glass-card rounded-3xl p-5 space-y-4">
+            <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
+                <!-- 關鍵字搜尋 -->
+                <div class="relative w-full md:w-96">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-lg">🔍</span>
+                    <input type="text" id="searchInput" oninput="filterData()" placeholder="搜尋採購項目、財添單序號、申請人、子計畫..." 
+                        class="w-full pl-10 pr-4 py-2.5 bg-white/90 border border-emerald-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all shadow-sm">
+                </div>
+
+                <!-- 篩選下拉選單群組 -->
+                <div class="flex flex-wrap sm:flex-nowrap gap-3 w-full md:w-auto">
+                    <select id="filterBudget" onchange="filterData()" class="w-full sm:w-auto px-4 py-2.5 bg-white/90 border border-emerald-200 rounded-2xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer shadow-sm">
+                        <option value="ALL">💰 所有採購金額</option>
+                        <option value="150萬以上">💎 150萬以上</option>
+                        <option value="150萬以下">💵 150萬以下</option>
+                    </select>
+
+                    <select id="filterStatus" onchange="filterData()" class="w-full sm:w-auto px-4 py-2.5 bg-white/90 border border-emerald-200 rounded-2xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer shadow-sm">
+                        <option value="ALL">🚦 所有採購狀態</option>
+                        <option value="未採購">⏳ 未採購</option>
+                        <option value="已送單">📨 已送單</option>
+                        <option value="詢價中">🔍 詢價中</option>
+                        <option value="議價中">🤝 議價中</option>
+                        <option value="產生訂單">📝 產生訂單</option>
+                        <option value="已驗收">✅ 已驗收</option>
+                        <option value="己核銷">🧾 己核銷</option>
+                        <option value="結案">🎉 結案</option>
+                    </select>
+
+                    <button onclick="resetFilters()" class="w-full sm:w-auto px-4 py-2.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold rounded-2xl text-sm transition-colors flex items-center justify-center gap-1 cursor-pointer">
+                        <span>🔄</span> 重置
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 採購案件列表區塊 -->
+        <section class="glass-card rounded-3xl overflow-hidden shadow-xl">
+            <div class="px-6 py-4 bg-emerald-50/80 border-b border-emerald-200/60 flex justify-between items-center">
+                <h2 class="text-lg font-extrabold text-emerald-950 flex items-center gap-2">
+                    <span>📋</span> 深耕計畫採購案件明細表
+                </h2>
+                <span id="table-count" class="text-xs font-bold bg-emerald-600 text-white px-3 py-1 rounded-full shadow-sm">
+                    顯示 0 筆資料
+                </span>
+            </div>
+
+            <!-- 響應式表格容器 -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-emerald-100/70 text-emerald-900 text-xs uppercase tracking-wider font-extrabold border-b border-emerald-200">
+                            <th class="py-3.5 px-4 whitespace-nowrap">🎯 範疇 / 子計畫</th>
+                            <th class="py-3.5 px-4 whitespace-nowrap">🛒 採購項目</th>
+                            <th class="py-3.5 px-4 whitespace-nowrap">💰 採購金額</th>
+                            <th class="py-3.5 px-4 whitespace-nowrap">🔢 財添單序號</th>
+                            <th class="py-3.5 px-4 whitespace-nowrap">🚦 目前狀態</th>
+                            <th class="py-3.5 px-4 whitespace-nowrap">👤 申請人</th>
+                            <th class="py-3.5 px-4 min-w-[200px]">📝 調查記錄說明</th>
+                            <th class="py-3.5 px-4 text-center whitespace-nowrap">⚙️ 操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="procurementTableBody" class="divide-y divide-emerald-100 text-sm bg-white/60">
+                        <!-- 資料將透過 JS 動態渲染 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 空資料提示畫面 -->
+            <div id="emptyState" class="hidden py-16 text-center px-4">
+                <div class="text-6xl mb-4 animate-bounce">🍃</div>
+                <h3 class="text-lg font-bold text-emerald-900">目前沒有符合條件的採購案件唷！</h3>
+                <p class="text-sm text-slate-500 mt-1">試著調整搜尋關鍵字，或點擊右上角「新增採購案件」建立第一筆資料吧！</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 新增 / 修改案件 彈出視窗 (Modal) -->
+    <div id="caseModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- 背景遮罩 -->
+        <div class="fixed inset-0 bg-emerald-950/50 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full max-w-2xl border-2 border-emerald-200">
+                <!-- Modal 標題列 -->
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 text-white flex justify-between items-center">
+                    <h3 id="modalTitle" class="text-xl font-black flex items-center gap-2">
+                        <span>✨</span> 新增深耕計畫採購案
+                    </h3>
+                    <button onclick="closeModal()" class="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl p-1.5 transition-colors cursor-pointer">
+                        ✖️
+                    </button>
+                </div>
+
+                <!-- 表單內容 -->
+                <form id="caseForm" onsubmit="saveCase(event)" class="p-6 space-y-4 bg-gradient-to-b from-emerald-50/40 to-white">
+                    <input type="hidden" id="caseId">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- 範疇 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">🎯 範疇 <span class="text-rose-500">*</span></label>
+                            <select id="fieldScope" required onchange="updateSubProjectOptions()"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-medium">
+                                <option value="" disabled selected>請選擇範疇</option>
+                                <option value="範疇一">範疇一</option>
+                                <option value="範疇二">範疇二</option>
+                                <option value="範疇三">範疇三</option>
+                                <option value="範疇四">範疇四</option>
+                            </select>
+                        </div>
+
+                        <!-- 子計畫 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">🌿 子計畫 <span class="text-rose-500">*</span></label>
+                            <select id="fieldSubProject" required
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-medium">
+                                <option value="" disabled selected>請先選擇範疇</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <!-- 採購項目 -->
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">🛒 採購項目 <span class="text-rose-500">*</span></label>
+                            <input type="text" id="fieldItem" required placeholder="例如：高解析度教學顯微鏡組"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white">
+                        </div>
+
+                        <!-- 採購金額級距 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">💰 採購金額 <span class="text-rose-500">*</span></label>
+                            <select id="fieldBudget" required class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-bold">
+                                <option value="150萬以下">💵 150萬以下</option>
+                                <option value="150萬以上">💎 150萬以上</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <!-- 財添單序號 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">🔢 財添單序號 <span class="text-rose-500">*</span></label>
+                            <input type="text" id="fieldSerial" required placeholder="例如：115-EDU-0089"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-mono">
+                        </div>
+
+                        <!-- 狀態 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">🚦 目前狀態 <span class="text-rose-500">*</span></label>
+                            <select id="fieldStatus" required class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-medium">
+                                <option value="未採購">⏳ 未採購</option>
+                                <option value="已送單">📨 已送單</option>
+                                <option value="詢價中">🔍 詢價中</option>
+                                <option value="議價中">🤝 議價中</option>
+                                <option value="產生訂單">📝 產生訂單</option>
+                                <option value="已驗收">✅ 已驗收</option>
+                                <option value="己核銷">🧾 己核銷</option>
+                                <option value="結案">🎉 結案</option>
+                            </select>
+                        </div>
+
+                        <!-- 申請人 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">👤 申請人 <span class="text-rose-500">*</span></label>
+                            <input type="text" id="fieldApplicant" required placeholder="例如：林小明 老師"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white">
+                        </div>
+                    </div>
+
+                    <!-- 調查記錄說明 -->
+                    <div>
+                        <label class="block text-xs font-extrabold text-emerald-900 mb-1">📝 調查記錄說明</label>
+                        <textarea id="fieldNotes" rows="3" placeholder="請輸入訪價紀錄、規格審查進度、廠商交期或核銷備註..."
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white"></textarea>
+                    </div>
+
+                    <!-- 按鈕區 -->
+                    <div class="pt-4 border-t border-emerald-100 flex justify-end gap-3">
+                        <button type="button" onclick="closeModal()" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors cursor-pointer">
+                            取消
+                        </button>
+                        <button type="submit" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5">
+                            <span>💾</span> 儲存案件資料
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定義刪除確認視窗 (取代原生 confirm) -->
+    <div id="deleteModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onclick="closeDeleteModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative transform overflow-hidden rounded-3xl bg-white p-6 text-center shadow-2xl transition-all max-w-sm w-full border-2 border-rose-200">
+                <div class="text-5xl mb-3 animate-bounce">🗑️</div>
+                <h3 class="text-lg font-black text-slate-800">確定要刪除此採購案嗎？</h3>
+                <p id="deleteTargetName" class="text-sm font-bold text-rose-600 mt-1"></p>
+                <p class="text-xs text-slate-500 mt-2">刪除後資料將無法復原，請確認是否繼續操作。</p>
+                <div class="mt-6 flex justify-center gap-3">
+                    <button onclick="closeDeleteModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors cursor-pointer">
+                        先不要
+                    </button>
+                    <button onclick="confirmDelete()" class="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm shadow-md transition-colors cursor-pointer">
+                        確認刪除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel 批次匯入視窗 -->
+    <div id="excelModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-emerald-950/50 backdrop-blur-sm transition-opacity" onclick="closeExcelModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all max-w-xl w-full border-2 border-emerald-200">
+                <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 text-white flex justify-between items-center">
+                    <h3 class="text-lg font-black flex items-center gap-2">
+                        <span>📊</span> Excel 批次匯入採購資料
+                    </h3>
+                    <button onclick="closeExcelModal()" class="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl p-1.5 cursor-pointer">✖️</button>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    <!-- 範本說明與下載 -->
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-extrabold text-emerald-900">📋 Excel 欄位格式說明</span>
+                            <button type="button" onclick="downloadExcelTemplate()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1">
+                                <span>⬇️</span> 下載標準 Excel 範本
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            第一列標題請包含：<span class="font-bold text-emerald-800">範疇、子計畫、採購項目、採購金額、財添單序號、目前狀態、申請人、調查記錄說明</span>（相容系統匯出的試算表格式）。
+                        </p>
+                    </div>
+
+                    <!-- 檔案選擇區 -->
+                    <div class="border-2 border-dashed border-emerald-300 rounded-2xl p-6 text-center bg-emerald-50/30 hover:bg-emerald-50/70 transition-colors">
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" onchange="handleExcelFile(event)" class="hidden">
+                        <label for="excelFileInput" class="cursor-pointer flex flex-col items-center justify-center space-y-2">
+                            <span class="text-4xl">📁</span>
+                            <span class="text-sm font-extrabold text-emerald-900">點擊選擇 Excel 檔案 (.xlsx / .xls / .csv)</span>
+                            <span id="excelFileName" class="text-xs text-slate-500">尚未選擇檔案</span>
+                        </label>
+                    </div>
+
+                    <!-- 匯入模式選擇 -->
+                    <div class="flex flex-col sm:flex-row gap-3 text-xs">
+                        <label class="flex-1 flex items-center gap-2 p-3 rounded-xl border border-emerald-200 bg-white cursor-pointer hover:bg-emerald-50">
+                            <input type="radio" name="importMode" value="append" checked class="text-emerald-600 focus:ring-emerald-500">
+                            <div>
+                                <div class="font-extrabold text-emerald-950">➕ 附加新增至現有資料</div>
+                                <div class="text-slate-500">保留現有案件，將 Excel 資料加進去</div>
+                            </div>
+                        </label>
+                        <label class="flex-1 flex items-center gap-2 p-3 rounded-xl border border-amber-200 bg-white cursor-pointer hover:bg-amber-50">
+                            <input type="radio" name="importMode" value="replace" class="text-amber-600 focus:ring-amber-500">
+                            <div>
+                                <div class="font-extrabold text-amber-950">🔄 覆蓋取代全部資料</div>
+                                <div class="text-slate-500">清空現有資料，完全以 Excel 為主</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- 預覽解析結果提示 -->
+                    <div id="excelPreviewBox" class="hidden bg-sky-50 border border-sky-200 rounded-2xl p-3.5 text-xs text-sky-900">
+                        <p class="font-extrabold" id="excelPreviewSummary"></p>
+                    </div>
+
+                    <!-- 按鈕區 -->
+                    <div class="pt-3 border-t border-slate-100 flex justify-end gap-3">
+                        <button type="button" onclick="closeExcelModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer">取消</button>
+                        <button type="button" id="confirmImportBtn" onclick="confirmExcelImport()" disabled class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold text-xs shadow cursor-pointer flex items-center gap-1.5">
+                            <span>🚀</span> 確認匯入並同步至 Google Sheets
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理者專屬：使用者帳號管理視窗 -->
+    <div id="userManageModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-emerald-950/60 backdrop-blur-sm transition-opacity" onclick="closeUserManageModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all max-w-2xl w-full border-2 border-amber-300">
+                <!-- 標題列 -->
+                <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-slate-950 flex justify-between items-center">
+                    <h3 class="text-lg font-black flex items-center gap-2">
+                        <span>👥</span> 使用者帳號管理 (管理者專屬)
+                    </h3>
+                    <button onclick="closeUserManageModal()" class="text-slate-900/80 hover:text-slate-900 bg-white/30 hover:bg-white/50 rounded-xl p-1.5 cursor-pointer font-bold">✖️</button>
+                </div>
+
+                <div class="p-6 space-y-6 bg-gradient-to-b from-amber-50/40 to-white">
+                    <!-- 新增使用者表單 -->
+                    <form id="addUserForm" onsubmit="addNewUser(event)" class="bg-white border border-amber-200 rounded-2xl p-4 shadow-xs space-y-3">
+                        <h4 class="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                            <span>➕</span> 新增一般使用者帳號（權限：新增、修改採購案件）
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">👤 登入帳號 <span class="text-rose-500">*</span></label>
+                                <input type="text" id="newUserAccount" required placeholder="例如：使用者4 或 王小明"
+                                    class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-xs font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">🔑 登入密碼 <span class="text-rose-500">*</span></label>
+                                <input type="text" id="newUserPassword" required placeholder="設定登入密碼"
+                                    class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-xs font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">🏷️ 顯示名稱 / 單位備註</label>
+                                <input type="text" id="newUserDisplayName" placeholder="選填，例如：教學部-王小明"
+                                    class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-xs">
+                            </div>
+                        </div>
+                        <div class="flex justify-end pt-1">
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs shadow cursor-pointer flex items-center gap-1">
+                                <span>✨</span> 新增使用者
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- 現有帳號列表 -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-black text-emerald-950">📋 目前系統帳號清單</h4>
+                            <span id="userTotalCount" class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">共 4 組帳號</span>
+                        </div>
+                        <div class="border border-emerald-200 rounded-2xl overflow-hidden bg-white">
+                            <div class="max-h-64 overflow-y-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="bg-emerald-50 text-emerald-900 font-extrabold border-b border-emerald-200">
+                                            <th class="py-2.5 px-3">登入帳號</th>
+                                            <th class="py-2.5 px-3">顯示名稱</th>
+                                            <th class="py-2.5 px-3">登入密碼</th>
+                                            <th class="py-2.5 px-3">權限角色</th>
+                                            <th class="py-2.5 px-3 text-center">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="userListTableBody" class="divide-y divide-slate-100">
+                                        <!-- 由 JS 動態渲染 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="button" onclick="closeUserManageModal()" class="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer">
+                            關閉視窗
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 漂浮提示訊息 (Toast) -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-emerald-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 border border-emerald-500/40">
+            <span id="toastIcon" class="text-xl">🎉</span>
+            <span id="toastMsg" class="text-sm font-bold">操作成功！</span>
+        </div>
+    </div>
+
+    <script>
+        // 狀態設定與對應的活潑樣式、Emoji
+        const STATUS_CONFIG = {
+            '未採購':   { emoji: '⏳', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300', chartColor: '#94a3b8' },
+            '已送單':   { emoji: '📨', bg: 'bg-sky-100', text: 'text-sky-700', border: 'border-sky-300', chartColor: '#38bdf8' },
+            '詢價中':   { emoji: '🔍', bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-300', chartColor: '#818cf8' },
+            '議價中':   { emoji: '🤝', bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', chartColor: '#c084fc' },
+            '產生訂單': { emoji: '📝', bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300', chartColor: '#fbbf24' },
+            '已驗收':   { emoji: '✅', bg: 'bg-teal-100', text: 'text-teal-800', border: 'border-teal-300', chartColor: '#2dd4bf' },
+            '己核銷':   { emoji: '🧾', bg: 'bg-lime-100', text: 'text-lime-800', border: 'border-lime-300', chartColor: '#a3e635' },
+            '結案':     { emoji: '🎉', bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-400', chartColor: '#10b981' }
+        };
+
+        const ALL_STATUSES = Object.keys(STATUS_CONFIG);
+
+        // 範疇與對應子計畫聯動對照表
+        const SCOPE_SUBPROJECTS = {
+            '範疇一': ['手術室', '藥學部', '健康資料中心', '臨床心理中心', '解剖病理科'],
+            '範疇二': ['教學部'],
+            '範疇三': ['智慧醫療創新中心'],
+            '範疇四': ['中醫部', '失智症中心', '永續發展中心', '轉銜照護中心', '精實醫療中心', '品管中心', '總計畫執行中心', '財務室']
+        };
+
+        // 預設模擬資料 (讓畫面一打開就充滿活力與真實感)
+        const DEFAULT_DATA = [
+            {
+                id: '1',
+                scope: '範疇一',
+                subProject: '手術室',
+                budget: '150萬以上',
+                item: '高效能GPU深度學習運算伺服器集群',
+                serial: '115-P01-0012',
+                status: '議價中',
+                applicant: '陳建宏 教授',
+                notes: '已完成三家廠商規格審查與公開閱覽，預計本週五進行底價核定與議價程序。'
+            },
+            {
+                id: '2',
+                scope: '範疇四',
+                subProject: '永續發展中心',
+                budget: '150萬以下',
+                item: '可攜式雷射雕刻機與3D列印教學套組',
+                serial: '115-P02-0045',
+                status: '已驗收',
+                applicant: '林雅婷 助理教授',
+                notes: '設備已送達創客基地並完成功能測試點交，財產標籤已黏貼完畢，準備送核銷。'
+            },
+            {
+                id: '3',
+                scope: '範疇三',
+                subProject: '智慧醫療創新中心',
+                budget: '150萬以上',
+                item: '高精度材料疲勞測試儀',
+                serial: '115-P03-0008',
+                status: '產生訂單',
+                applicant: '王志明 主任',
+                notes: '德國原廠進口設備，已開立信用狀並產生正式採購訂單，預計交期為60個工作天。'
+            },
+            {
+                id: '4',
+                scope: '範疇二',
+                subProject: '教學部',
+                budget: '150萬以下',
+                item: '輕薄型教學借用筆記型電腦 (30台)',
+                serial: '115-P04-0091',
+                status: '結案',
+                applicant: '張美玲 專員',
+                notes: '已完成驗收、核銷撥款及財產登錄，全案順利結案！'
+            },
+            {
+                id: '5',
+                scope: '範疇一',
+                subProject: '藥學部',
+                budget: '150萬以下',
+                item: '4K廣播級攝影機與虛擬棚燈光音響設備',
+                serial: '115-P01-0103',
+                status: '詢價中',
+                applicant: '李俊傑 老師',
+                notes: '已請購送出，採購組正針對三家報價單進行規格與保固年限比價確認。'
+            },
+            {
+                id: '6',
+                scope: '範疇四',
+                subProject: '失智症中心',
+                budget: '150萬以下',
+                item: '多光譜無人機遙測系統',
+                serial: '115-P05-0027',
+                status: '己核銷',
+                applicant: '黃淑芬 研究員',
+                notes: '憑證已送會計室審核通過，等待出納組匯款給廠商即可正式結案。'
+            },
+            {
+                id: '7',
+                scope: '範疇一',
+                subProject: '健康資料中心',
+                budget: '150萬以下',
+                item: '一體式VR頭戴顯示器及生理回饋感測器',
+                serial: '115-P01-0118',
+                status: '已送單',
+                applicant: '吳佩珊 講師',
+                notes: '財添單已由系辦核章送出至總務處採購組收件。'
+            },
+            {
+                id: '8',
+                scope: '範疇四',
+                subProject: '精實醫療中心',
+                budget: '150萬以上',
+                item: '全自動光學檢測(AOI)教學模擬機台',
+                serial: '115-P03-0033',
+                status: '未採購',
+                applicant: '劉國華 教授',
+                notes: '規格書草擬中，下週召開系務設備規劃會議確認最終規格參數。'
+            }
+        ];
+
+        // 應用程式狀態
+        let procurementList = [];
+        let deleteTargetId = null;
+        let statusChartInstance = null;
+        let budgetChartInstance = null;
+        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzI6jNhpGRzHZNt8rfXaTp937xdOvG9jCY8RBurzQbe7EVcvnsbXrBAvyW5VNUUeNuI/exec';
+        let gasWebAppUrl = '';
+        
+        // 預設帳號設定與動態帳號庫 (支援管理者新增、修改密碼、刪除使用者)
+        const DEFAULT_ACCOUNTS = {
+            admin: { password: '888', role: 'admin', label: '管理者 (admin)', icon: '👑', isSystemAdmin: true },
+            '使用者1': { password: 'password', role: 'user', label: '使用者1', icon: '🔍' },
+            '使用者2': { password: 'password', role: 'user', label: '使用者2', icon: '🔍' },
+            '使用者3': { password: 'password', role: 'user', label: '使用者3', icon: '🔍' }
+        };
+        let ACCOUNTS = {};
+        let currentRole = null;
+        let currentAccountLabel = '';
+        let currentUsername = '';
+
+        function loadAccounts() {
+            try {
+                const saved = localStorage.getItem('deep_cultivation_accounts_v1');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    ACCOUNTS = { ...DEFAULT_ACCOUNTS, ...parsed };
+                } else {
+                    ACCOUNTS = JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
+                    saveAccounts();
+                }
+            } catch (e) {
+                console.error('讀取帳號資料失敗:', e);
+                ACCOUNTS = JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
+            }
+        }
+
+        function saveAccounts() {
+            try {
+                localStorage.setItem('deep_cultivation_accounts_v1', JSON.stringify(ACCOUNTS));
+            } catch (e) {
+                console.error('儲存帳號資料失敗:', e);
+            }
+        }
+
+        // 初始化載入
+        window.onload = async function () {
+            loadAccounts();
+            const savedUrl = localStorage.getItem('deep_cultivation_gas_url');
+            gasWebAppUrl = savedUrl !== null ? savedUrl : DEFAULT_GAS_URL;
+            
+            // 檢查目前分頁是否已登入 (使用 sessionStorage，關閉分頁或重新進入需重新登入)
+            const savedSessionRole = sessionStorage.getItem('deep_cultivation_session_role');
+            const savedSessionLabel = sessionStorage.getItem('deep_cultivation_session_label');
+            const savedSessionUser = sessionStorage.getItem('deep_cultivation_session_user');
+            if (savedSessionRole === 'admin' || savedSessionRole === 'user') {
+                currentRole = savedSessionRole;
+                currentAccountLabel = savedSessionLabel || (savedSessionRole === 'admin' ? '管理者 (admin)' : '使用者1');
+                currentUsername = savedSessionUser || (savedSessionRole === 'admin' ? 'admin' : '使用者1');
+                document.getElementById('loginOverlay').classList.add('hidden');
+                applyRolePermissions();
+                await initSystemData();
+            } else {
+                // 尚未登入，顯示登入遮罩並聚焦帳號輸入框
+                document.getElementById('loginOverlay').classList.remove('hidden');
+                setTimeout(() => document.getElementById('loginUsername').focus(), 100);
+            }
+        };
+
+        // 初始化系統資料載入
+        async function initSystemData() {
+            loadData();
+            updateLastUpdatedTime();
+            renderAll();
+
+            if (gasWebAppUrl) {
+                await fetchFromGoogleSheet(false);
+            }
+        }
+
+        // ==================== 登入與權限管理函式 ====================
+        function togglePasswordVisibility() {
+            const pwdInput = document.getElementById('loginPassword');
+            const toggleBtn = document.getElementById('togglePasswordBtn');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+                toggleBtn.title = '隱藏密碼';
+            } else {
+                pwdInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+                toggleBtn.title = '顯示密碼';
+            }
+        }
+
+        function checkPasswordMatch() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const pwdInput = document.getElementById('loginPassword');
+            const statusIcon = document.getElementById('passwordStatusIcon');
+            const matchBadge = document.getElementById('passwordMatchBadge');
+
+            // 尚未輸入密碼時恢復預設外觀
+            if (!password) {
+                statusIcon.classList.add('hidden');
+                matchBadge.classList.add('hidden');
+                pwdInput.classList.remove('border-emerald-500', 'bg-emerald-50/80', 'border-rose-400', 'bg-rose-50/50');
+                pwdInput.classList.add('border-emerald-200', 'bg-emerald-50/40');
+                return;
+            }
+
+            const account = ACCOUNTS[username];
+            statusIcon.classList.remove('hidden');
+            matchBadge.classList.remove('hidden');
+
+            if (!account) {
+                statusIcon.textContent = '❓';
+                matchBadge.textContent = '⚠️ 請先輸入有效帳號';
+                matchBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800';
+                pwdInput.classList.remove('border-emerald-500', 'bg-emerald-50/80', 'border-rose-400', 'bg-rose-50/50');
+                pwdInput.classList.add('border-emerald-200', 'bg-emerald-50/40');
+            } else if (account.password === password) {
+                statusIcon.textContent = '✅';
+                matchBadge.textContent = `✅ 密碼正確 (${account.icon} ${account.label.split(' ')[0]})`;
+                matchBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+                pwdInput.classList.remove('border-emerald-200', 'bg-emerald-50/40', 'border-rose-400', 'bg-rose-50/50');
+                pwdInput.classList.add('border-emerald-500', 'bg-emerald-50/80');
+            } else {
+                statusIcon.textContent = '❌';
+                matchBadge.textContent = '❌ 密碼尚未符合';
+                matchBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700';
+                pwdInput.classList.remove('border-emerald-200', 'bg-emerald-50/40', 'border-emerald-500', 'bg-emerald-50/80');
+                pwdInput.classList.add('border-rose-400', 'bg-rose-50/50');
+            }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorBox = document.getElementById('loginErrorMsg');
+
+            const account = ACCOUNTS[username];
+            if (account && account.password === password) {
+                errorBox.classList.add('hidden');
+                currentRole = account.role;
+                currentAccountLabel = account.label;
+                currentUsername = username;
+                sessionStorage.setItem('deep_cultivation_session_role', currentRole);
+                sessionStorage.setItem('deep_cultivation_session_label', currentAccountLabel);
+                sessionStorage.setItem('deep_cultivation_session_user', currentUsername);
+
+                // 隱藏登入遮罩並套用權限
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('loginForm').reset();
+                document.getElementById('loginPassword').type = 'password';
+                document.getElementById('togglePasswordBtn').textContent = '👁️';
+                checkPasswordMatch();
+                applyRolePermissions();
+                await initSystemData();
+                showToast(`${account.icon} 歡迎登入！目前為「${account.label}」`);
+            } else {
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            currentRole = null;
+            currentAccountLabel = '';
+            currentUsername = '';
+            sessionStorage.removeItem('deep_cultivation_session_role');
+            sessionStorage.removeItem('deep_cultivation_session_label');
+            sessionStorage.removeItem('deep_cultivation_session_user');
+            document.getElementById('loginErrorMsg').classList.add('hidden');
+            document.getElementById('loginForm').reset();
+            document.getElementById('loginPassword').type = 'password';
+            document.getElementById('togglePasswordBtn').textContent = '👁️';
+            checkPasswordMatch();
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            setTimeout(() => document.getElementById('loginUsername').focus(), 100);
+        }
+
+        function applyRolePermissions() {
+            const roleIcon = document.getElementById('roleIcon');
+            const roleLabel = document.getElementById('roleLabel');
+            const roleBadge = document.getElementById('roleBadge');
+            const btnExcelImport = document.getElementById('btnExcelImport');
+            const btnUserManage = document.getElementById('btnUserManage');
+
+            if (currentRole === 'admin') {
+                roleIcon.textContent = '👑';
+                roleLabel.textContent = currentAccountLabel || '管理者 (admin)';
+                roleBadge.className = 'w-full sm:w-auto bg-amber-400/95 text-amber-950 border border-amber-200 font-extrabold px-4 py-2.5 rounded-2xl shadow-md flex items-center justify-center gap-1.5 text-sm';
+                if (btnExcelImport) btnExcelImport.classList.remove('hidden');
+                if (btnUserManage) btnUserManage.classList.remove('hidden');
+            } else {
+                roleIcon.textContent = '🔍';
+                roleLabel.textContent = currentAccountLabel || '使用者1';
+                roleBadge.className = 'w-full sm:w-auto bg-white/20 text-white border border-white/40 font-extrabold px-4 py-2.5 rounded-2xl shadow-md flex items-center justify-center gap-1.5 text-sm';
+                if (btnExcelImport) btnExcelImport.classList.add('hidden');
+                if (btnUserManage) btnUserManage.classList.add('hidden');
+            }
+        }
+
+        // ==================== 管理者：使用者帳號管理功能 ====================
+        function openUserManageModal() {
+            if (currentRole !== 'admin') {
+                showToast('⛔ 權限不足：僅「管理者」可使用帳號管理功能！');
+                return;
+            }
+            document.getElementById('addUserForm').reset();
+            renderUserList();
+            document.getElementById('userManageModal').classList.remove('hidden');
+        }
+
+        function closeUserManageModal() {
+            document.getElementById('userManageModal').classList.add('hidden');
+        }
+
+        function renderUserList() {
+            const tbody = document.getElementById('userListTableBody');
+            const countBadge = document.getElementById('userTotalCount');
+            const keys = Object.keys(ACCOUNTS);
+            countBadge.textContent = `共 ${keys.length} 組帳號`;
+            tbody.innerHTML = '';
+
+            keys.forEach(username => {
+                const acc = ACCOUNTS[username];
+                const isAdmin = acc.role === 'admin';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-amber-50/60 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-extrabold text-slate-800">${escapeHtml(username)}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${escapeHtml(acc.label || username)}</td>
+                    <td class="py-2.5 px-3">
+                        <span class="font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">${escapeHtml(acc.password)}</span>
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+                            isAdmin ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                        }">
+                            ${isAdmin ? '👑 管理者' : '🔍 一般使用者'}
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                        ${acc.isSystemAdmin ? `
+                            <span class="text-[11px] text-slate-400 font-bold">系統預設</span>
+                        ` : `
+                            <button type="button" onclick="deleteUserAccount('${escapeHtml(username)}')" title="刪除此使用者"
+                                class="px-2.5 py-1 bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white rounded-lg font-bold transition-colors cursor-pointer">
+                                🗑️ 刪除
+                            </button>
+                        `}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addNewUser(event) {
+            event.preventDefault();
+            if (currentRole !== 'admin') return;
+
+            const accountInput = document.getElementById('newUserAccount');
+            const passwordInput = document.getElementById('newUserPassword');
+            const displayInput = document.getElementById('newUserDisplayName');
+
+            const username = accountInput.value.trim();
+            const password = passwordInput.value.trim();
+            const displayName = displayInput.value.trim();
+
+            if (!username || !password) {
+                showToast('⚠️ 請填寫完整帳號與密碼！');
+                return;
+            }
+
+            if (ACCOUNTS[username]) {
+                // 若帳號已存在則更新其密碼與顯示名稱
+                ACCOUNTS[username].password = password;
+                if (displayName) ACCOUNTS[username].label = displayName;
+                saveAccounts();
+                renderUserList();
+                document.getElementById('addUserForm').reset();
+                showToast(`✅ 已更新使用者「${username}」的密碼與資料！`);
+                return;
+            }
+
+            ACCOUNTS[username] = {
+                password: password,
+                role: 'user',
+                label: displayName || username,
+                icon: '🔍'
+            };
+
+            saveAccounts();
+            renderUserList();
+            document.getElementById('addUserForm').reset();
+            showToast(`🎉 已成功新增使用者「${username}」！`);
+        }
+
+        function deleteUserAccount(username) {
+            if (currentRole !== 'admin') return;
+            if (!ACCOUNTS[username] || ACCOUNTS[username].isSystemAdmin) return;
+
+            delete ACCOUNTS[username];
+            saveAccounts();
+            renderUserList();
+            showToast(`🗑️ 已刪除使用者「${username}」`);
+        }
+
+        // 格式化並更新「最後更新時間：YYYY年MM月DD日 HH:mm」
+        function updateLastUpdatedTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const formatted = `${year}年${month}月${day}日 ${hours}:${minutes}`;
+
+            const el = document.getElementById('lastUpdatedDisplay');
+            if (el) {
+                el.textContent = `🕒 最後更新：${formatted}`;
+            }
+        }
+
+        // 從 Google Sheets 讀取最新資料並自動帶入網頁
+        async function fetchFromGoogleSheet(showNotification = false) {
+            if (!gasWebAppUrl) return;
+            try {
+                if (showNotification) {
+                    showToast('⏳ 正在從 Google Sheets 讀取最新資料...');
+                }
+                const response = await fetch(gasWebAppUrl);
+                const result = await response.json();
+
+                if (result.status === 'success' && Array.isArray(result.data)) {
+                    procurementList = result.data;
+                    saveToStorage();
+                    renderAll();
+                    if (showNotification) {
+                        showToast(`✅ 已成功從試算表載入 ${procurementList.length} 筆最新資料！`);
+                    }
+                } else {
+                    console.warn('Google Sheets 回傳格式異常:', result);
+                    if (showNotification) {
+                        showToast('⚠️ 讀取 Google Sheets 異常，請確認 Apps Script 已重新部署');
+                    }
+                }
+            } catch (err) {
+                console.error('讀取 Google Sheets 失敗:', err);
+                if (showNotification) {
+                    showToast('⚠️ 無法連線至 Google Sheets，目前顯示本地快取資料');
+                }
+            }
+        }
+
+        // 傳送資料至 Google Apps Script
+        async function sendToGoogleSheet(payload) {
+            if (!gasWebAppUrl) return;
+            try {
+                // 自動夾帶目前登入帳號的「顯示名稱 / 單位備註」作為編輯者
+                const enrichedPayload = {
+                    ...payload,
+                    editor: currentAccountLabel || currentUsername || ''
+                };
+                // 使用 text/plain 避免 CORS 預檢 (Preflight) 阻擋，Apps Script 仍可透過 e.postData.contents 完整解析 JSON
+                await fetch(gasWebAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify(enrichedPayload)
+                });
+            } catch (err) {
+                console.error('同步至 Google Sheets 發生錯誤:', err);
+                showToast('⚠️ 雲端同步發生錯誤，資料已先存於本機');
+            }
+        }
+
+        // 儲存案件 (新增或修改)
+        function saveCase(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('caseId').value;
+            const caseData = {
+                id: id || Date.now().toString(),
+                scope: document.getElementById('fieldScope').value.trim(),
+                subProject: document.getElementById('fieldSubProject').value.trim(),
+                item: document.getElementById('fieldItem').value.trim(),
+                budget: document.getElementById('fieldBudget').value,
+                serial: document.getElementById('fieldSerial').value.trim(),
+                status: document.getElementById('fieldStatus').value,
+                applicant: document.getElementById('fieldApplicant').value.trim(),
+                notes: document.getElementById('fieldNotes').value.trim(),
+                editor: currentAccountLabel || currentUsername || ''
+            };
+
+            if (id) {
+                const index = procurementList.findIndex(item => String(item.id) === String(id));
+                if (index !== -1) {
+                    procurementList[index] = caseData;
+                }
+                showToast('✨ 採購案件已成功修改！');
+            } else {
+                procurementList.unshift(caseData);
+                showToast('🎉 新採購案件已加入追蹤清單！');
+            }
+
+            saveToStorage();
+            renderAll();
+            closeModal();
+            sendToGoogleSheet({ action: 'upsert', data: caseData });
+        }
+
+        // 刪除案件
+        function openDeleteModal(id, itemName) {
+            if (currentRole !== 'admin') {
+                showToast('⛔ 權限不足：僅「管理者」可刪除採購案件！');
+                return;
+            }
+            deleteTargetId = String(id);
+            document.getElementById('deleteTargetName').textContent = `「${itemName}」`;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            deleteTargetId = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        function confirmDelete() {
+            if (currentRole !== 'admin') {
+                showToast('⛔ 權限不足：僅「管理者」可刪除採購案件！');
+                closeDeleteModal();
+                return;
+            }
+            if (!deleteTargetId) return;
+            const targetId = String(deleteTargetId);
+            procurementList = procurementList.filter(item => String(item.id) !== targetId);
+            saveToStorage();
+            renderAll();
+            closeDeleteModal();
+            showToast('🗑️ 採購案件已刪除');
+            sendToGoogleSheet({ action: 'delete', id: targetId });
+        }
+
+        // 本地儲存 (localStorage)
+        function saveToStorage() {
+            try {
+                localStorage.setItem('deep_cultivation_procurement_v1', JSON.stringify(procurementList));
+                updateLastUpdatedTime();
+            } catch (e) {
+                console.error('無法儲存至 localStorage:', e);
+            }
+        }
+
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('deep_cultivation_procurement_v1');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                        procurementList = parsed;
+                        return;
+                    }
+                }
+                procurementList = [...DEFAULT_DATA];
+                saveToStorage();
+            } catch (e) {
+                console.error('讀取本地資料失敗，使用預設資料:', e);
+                procurementList = [...DEFAULT_DATA];
+            }
+        }
+
+        // 渲染所有畫面 (KPI、圖表、表格)
+        function renderAll() {
+            updateDashboard();
+            filterData();
+        }
+
+        // 更新儀表板 KPI 與圖表
+        function updateDashboard() {
+            const total = procurementList.length;
+            const over150 = procurementList.filter(item => item.budget === '150萬以上').length;
+            const closedCount = procurementList.filter(item => item.status === '結案').length;
+            const activeCount = total - closedCount;
+            const rate = total > 0 ? Math.round((closedCount / total) * 100) : 0;
+
+            document.getElementById('kpi-total').textContent = total;
+            document.getElementById('kpi-over150').textContent = over150;
+            document.getElementById('kpi-active').textContent = activeCount;
+            document.getElementById('kpi-rate').textContent = `${rate}%`;
+            document.getElementById('kpi-closed-count').textContent = `${closedCount} 件結案`;
+            document.getElementById('kpi-progress-bar').style.width = `${rate}%`;
+
+            // 統計各狀態數量
+            const statusCounts = ALL_STATUSES.map(st =>
+                procurementList.filter(item => item.status === st).length
+            );
+
+            // 更新長條圖
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            if (statusChartInstance) {
+                statusChartInstance.destroy();
+            }
+            statusChartInstance = new Chart(statusCtx, {
+                type: 'bar',
+                data: {
+                    labels: ALL_STATUSES.map(st => `${STATUS_CONFIG[st].emoji} ${st}`),
+                    datasets: [{
+                        label: '案件數量',
+                        data: statusCounts,
+                        backgroundColor: ALL_STATUSES.map(st => STATUS_CONFIG[st].chartColor),
+                        borderRadius: 10,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, precision: 0 },
+                            grid: { color: 'rgba(16, 185, 129, 0.1)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // 統計金額級距數量
+            const under150 = total - over150;
+            const budgetCtx = document.getElementById('budgetChart').getContext('2d');
+            if (budgetChartInstance) {
+                budgetChartInstance.destroy();
+            }
+            budgetChartInstance = new Chart(budgetCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['💎 150萬以上', '💵 150萬以下'],
+                    datasets: [{
+                        data: [over150, under150],
+                        backgroundColor: ['#f59e0b', '#10b981'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 16,
+                                font: { weight: 'bold' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 篩選與搜尋資料
+        function filterData() {
+            const keyword = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+            const budgetFilter = document.getElementById('filterBudget').value;
+            const statusFilter = document.getElementById('filterStatus').value;
+
+            const filtered = procurementList.filter(item => {
+                const matchBudget = budgetFilter === 'ALL' || item.budget === budgetFilter;
+                const matchStatus = statusFilter === 'ALL' || item.status === statusFilter;
+                const matchKeyword = !keyword || [
+                    item.scope,
+                    item.subProject,
+                    item.item,
+                    item.budget,
+                    item.serial,
+                    item.status,
+                    item.applicant,
+                    item.notes
+                ].some(val => String(val || '').toLowerCase().includes(keyword));
+
+                return matchBudget && matchStatus && matchKeyword;
+            });
+
+            renderTable(filtered);
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterBudget').value = 'ALL';
+            document.getElementById('filterStatus').value = 'ALL';
+            filterData();
+        }
+
+        // 渲染採購案件表格
+        function renderTable(list) {
+            const tbody = document.getElementById('procurementTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const countBadge = document.getElementById('table-count');
+
+            countBadge.textContent = `顯示 ${list.length} 筆資料`;
+            tbody.innerHTML = '';
+
+            if (!list || list.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            list.forEach(item => {
+                const stCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG['未採購'];
+                const isOver150 = item.budget === '150萬以上';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-emerald-50/80 transition-colors';
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <div class="font-extrabold text-emerald-950">${escapeHtml(item.scope)}</div>
+                        <div class="text-xs font-bold text-emerald-700 mt-0.5">🌿 ${escapeHtml(item.subProject)}</div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <div class="font-bold text-slate-800">${escapeHtml(item.item)}</div>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold ${
+                            isOver150
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        }">
+                            ${isOver150 ? '💎' : '💵'} ${escapeHtml(item.budget)}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap font-mono text-xs font-bold text-slate-700">
+                        ${escapeHtml(item.serial)}
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold border ${stCfg.bg} ${stCfg.text} ${stCfg.border}">
+                            ${stCfg.emoji} ${escapeHtml(item.status)}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap font-bold text-slate-700">
+                        ${escapeHtml(item.applicant)}
+                    </td>
+                    <td class="py-3.5 px-4 text-xs text-slate-600 leading-relaxed max-w-xs">
+                        ${escapeHtml(item.notes || '—')}
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap text-center">
+                        <div class="inline-flex items-center gap-1.5">
+                            <button onclick="openModal('${escapeHtml(String(item.id))}')" title="修改案件"
+                                class="px-2.5 py-1.5 bg-sky-100 hover:bg-sky-500 text-sky-800 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer">
+                                ✏️ 修改
+                            </button>
+                            ${currentRole === 'admin' ? `
+                                <button onclick="openDeleteModal('${escapeHtml(String(item.id))}', '${escapeHtml(String(item.item))}')" title="刪除案件"
+                                    class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer">
+                                    🗑️ 刪除
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 範疇與子計畫下拉選單聯動
+        function updateSubProjectOptions(selectedSubProject = '') {
+            const scopeVal = document.getElementById('fieldScope').value;
+            const subSelect = document.getElementById('fieldSubProject');
+            const options = SCOPE_SUBPROJECTS[scopeVal] || [];
+
+            subSelect.innerHTML = '';
+            if (!scopeVal) {
+                subSelect.innerHTML = '<option value="" disabled selected>請先選擇範疇</option>';
+                return;
+            }
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.disabled = true;
+            defaultOpt.textContent = '請選擇子計畫';
+            subSelect.appendChild(defaultOpt);
+
+            options.forEach(sub => {
+                const opt = document.createElement('option');
+                opt.value = sub;
+                opt.textContent = sub;
+                if (sub === selectedSubProject) opt.selected = true;
+                subSelect.appendChild(opt);
+            });
+
+            // 若編輯舊資料且子計畫不在預設清單中，保留該選項避免遺失
+            if (selectedSubProject && !options.includes(selectedSubProject)) {
+                const customOpt = document.createElement('option');
+                customOpt.value = selectedSubProject;
+                customOpt.textContent = `${selectedSubProject} (既有資料)`;
+                customOpt.selected = true;
+                subSelect.appendChild(customOpt);
+            }
+
+            if (!selectedSubProject) {
+                defaultOpt.selected = true;
+            }
+        }
+
+        // 開啟新增或修改 Modal
+        function openModal(caseId = null) {
+            const modal = document.getElementById('caseModal');
+            const form = document.getElementById('caseForm');
+            const modalTitle = document.getElementById('modalTitle');
+            form.reset();
+
+            if (caseId) {
+                const target = procurementList.find(item => String(item.id) === String(caseId));
+                if (!target) return;
+
+                modalTitle.innerHTML = '<span>✏️</span> 修改深耕計畫採購案';
+                document.getElementById('caseId').value = target.id;
+                document.getElementById('fieldScope').value = target.scope || '';
+                updateSubProjectOptions(target.subProject || '');
+                document.getElementById('fieldItem').value = target.item || '';
+                document.getElementById('fieldBudget').value = target.budget || '150萬以下';
+                document.getElementById('fieldSerial').value = target.serial || '';
+                document.getElementById('fieldStatus').value = target.status || '未採購';
+                document.getElementById('fieldApplicant').value = target.applicant || '';
+                document.getElementById('fieldNotes').value = target.notes || '';
+            } else {
+                modalTitle.innerHTML = '<span>✨</span> 新增深耕計畫採購案';
+                document.getElementById('caseId').value = '';
+                document.getElementById('fieldScope').value = '';
+                updateSubProjectOptions('');
+                document.getElementById('fieldBudget').value = '150萬以下';
+                document.getElementById('fieldStatus').value = '未採購';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('caseModal').classList.add('hidden');
+        }
+
+        // ==================== Excel 匯入功能 ====================
+        let parsedExcelRows = [];
+
+        function openExcelModal() {
+            if (currentRole !== 'admin') {
+                showToast('⛔ 權限不足：僅「管理者」可使用 Excel 批次匯入！');
+                return;
+            }
+            parsedExcelRows = [];
+            document.getElementById('excelFileInput').value = '';
+            document.getElementById('excelFileName').textContent = '尚未選擇檔案';
+            document.getElementById('excelPreviewBox').classList.add('hidden');
+            document.getElementById('confirmImportBtn').disabled = true;
+            document.getElementById('excelModal').classList.remove('hidden');
+        }
+
+        function closeExcelModal() {
+            document.getElementById('excelModal').classList.add('hidden');
+        }
+
+        function downloadExcelTemplate() {
+            const sampleRows = [
+                {
+                    '範疇': '範疇一',
+                    '子計畫': '手術室',
+                    '採購項目': '高解析度內視鏡影像系統',
+                    '採購金額': '150萬以上',
+                    '財添單序號': '115-P01-0201',
+                    '目前狀態': '未採購',
+                    '申請人': '王大明 醫師',
+                    '調查記錄說明': '待確認規格書與預算編列'
+                },
+                {
+                    '範疇': '範疇二',
+                    '子計畫': '教學部',
+                    '採購項目': '數位病理教學切片組',
+                    '採購金額': '150萬以下',
+                    '財添單序號': '115-P02-0202',
+                    '目前狀態': '已送單',
+                    '申請人': '陳小華 老師',
+                    '調查記錄說明': '已送出財添單至採購組'
+                }
+            ];
+            const worksheet = XLSX.utils.json_to_sheet(sampleRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, '採購匯入範本');
+            XLSX.writeFile(workbook, '深耕計畫採購案_匯入範本.xlsx');
+        }
+
+        function handleExcelFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('excelFileName').textContent = `📄 ${file.name}`;
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const targetSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[targetSheetName];
+                    const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+                    parsedExcelRows = rawRows
+                        .filter(r => String(r['採購項目'] || '').trim() !== '' || String(r['財添單序號'] || '').trim() !== '')
+                        .map((r, idx) => {
+                            const rawBudget = String(r['採購金額'] || '').trim();
+                            const budgetVal = rawBudget.includes('150萬以上') || rawBudget.includes('以上') ? '150萬以上' : '150萬以下';
+                            const rawStatus = String(r['目前狀態'] || r['狀態'] || '未採購').trim();
+                            const statusVal = ALL_STATUSES.includes(rawStatus) ? rawStatus : '未採購';
+
+                            return {
+                                id: r['案件ID'] ? String(r['案件ID']).trim() : `${Date.now()}_${idx}`,
+                                scope: String(r['範疇'] || '範疇一').trim(),
+                                subProject: String(r['子計畫'] || '').trim(),
+                                item: String(r['採購項目'] || '未命名採購項目').trim(),
+                                budget: budgetVal,
+                                serial: String(r['財添單序號'] || '待補序號').trim(),
+                                status: statusVal,
+                                applicant: String(r['申請人'] || '未填寫').trim(),
+                                notes: String(r['調查記錄說明'] || '').trim(),
+                                editor: currentAccountLabel || currentUsername || ''
+                            };
+                        });
+
+                    const previewBox = document.getElementById('excelPreviewBox');
+                    const previewSummary = document.getElementById('excelPreviewSummary');
+                    const importBtn = document.getElementById('confirmImportBtn');
+
+                    if (parsedExcelRows.length > 0) {
+                        previewBox.classList.remove('hidden');
+                        previewSummary.textContent = `✅ 成功從工作表「${targetSheetName}」解析出 ${parsedExcelRows.length} 筆有效採購資料，點擊下方按鈕即可匯入並同步至 Google Sheets！`;
+                        importBtn.disabled = false;
+                    } else {
+                        previewBox.classList.remove('hidden');
+                        previewSummary.textContent = `⚠️ 找不到有效的採購資料，請確認 Excel 第一列包含正確的欄位標題（範疇、子計畫、採購項目等）。`;
+                        importBtn.disabled = true;
+                    }
+                } catch (err) {
+                    console.error('Excel 解析錯誤:', err);
+                    showToast('❌ Excel 檔案解析失敗，請確認檔案格式是否正確');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 確認匯入並同步至 Google Sheets
+        async function confirmExcelImport() {
+            if (parsedExcelRows.length === 0) return;
+
+            const mode = document.querySelector('input[name="importMode"]:checked').value;
+            if (mode === 'replace') {
+                procurementList = [...parsedExcelRows];
+            } else {
+                procurementList = [...parsedExcelRows, ...procurementList];
+            }
+
+            saveToStorage();
+            renderAll();
+            closeExcelModal();
+
+            showToast(`⏳ 正在將 ${parsedExcelRows.length} 筆 Excel 資料同步至 Google Sheets...`);
+            await sendToGoogleSheet({ action: 'syncAll', data: procurementList });
+            setTimeout(() => {
+                showToast(`🎉 成功匯入 ${parsedExcelRows.length} 筆資料並同步至「採購明細」！`);
+            }, 800);
+        }
+
+        // 提示訊息與 XSS 安全跳脫工具
+        let toastTimer = null;
+        function showToast(message, icon = '✨') {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMsg = document.getElementById('toastMsg');
+            toastIcon.textContent = icon;
+            toastMsg.textContent = message;
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+    </script>
+</body>
+</html>
