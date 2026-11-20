@@ -158,6 +158,9 @@
                 <button onclick="fetchFromGoogleSheet(true)" class="w-full sm:w-auto bg-emerald-700/80 hover:bg-emerald-800 text-white border border-emerald-300/50 font-bold px-4 py-2.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm" title="從 Google Sheets 拉取最新資料">
                     <span class="text-base">🔄</span> 同步雲端資料
                 </button>
+                <button onclick="exportToExcel()" class="w-full sm:w-auto bg-sky-600/90 hover:bg-sky-700 text-white border border-sky-300/50 font-bold px-4 py-2.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm" title="將目前顯示的採購明細匯出為 Excel 檔案">
+                    <span class="text-base">📤</span> 匯出 Excel
+                </button>
                 <button id="btnUserManage" onclick="openUserManageModal()" class="hidden w-full sm:w-auto bg-amber-500/95 hover:bg-amber-600 text-slate-900 border border-amber-200 font-extrabold px-4 py-2.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm">
                     <span class="text-base">👥</span> 使用者管理
                 </button>
@@ -627,7 +630,7 @@
                     <!-- 新增使用者表單 -->
                     <form id="addUserForm" onsubmit="addNewUser(event)" class="bg-white border border-amber-200 rounded-2xl p-4 shadow-xs space-y-3">
                         <h4 class="text-xs font-black text-amber-900 flex items-center gap-1.5">
-                            <span>➕</span> 新增一般使用者帳號（權限：新增、修改採購案件）
+                            <span>➕</span> 新增或更新一般使用者帳號（權限：新增、修改授權範疇內的採購案件）
                         </h4>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
@@ -642,13 +645,41 @@
                             </div>
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-600 mb-1">🏷️ 顯示名稱 / 單位備註</label>
-                                <input type="text" id="newUserDisplayName" placeholder="選填，例如：教學部-王小明"
+                                <input type="text" id="newUserDisplayName" placeholder="選填，例如：手術室-王小明"
                                     class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-xs">
+                            </div>
+                        </div>
+                        <!-- 可檢視範疇權限勾選區 -->
+                        <div class="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-[11px] font-extrabold text-amber-950">🎯 授權可檢視與編輯的範疇 <span class="text-rose-500">*</span></label>
+                                <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-800 cursor-pointer">
+                                    <input type="checkbox" id="newUserScopeAll" onchange="toggleNewUserAllScopes(this)" class="rounded text-emerald-600 focus:ring-emerald-500">
+                                    <span>🌐 全部範疇</span>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold text-slate-700">
+                                <label class="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-amber-200/60 cursor-pointer hover:bg-amber-50">
+                                    <input type="checkbox" name="newUserScopes" value="範疇一" onchange="syncNewUserAllCheckbox()" class="rounded text-amber-600 focus:ring-amber-500">
+                                    <span>範疇一</span>
+                                </label>
+                                <label class="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-amber-200/60 cursor-pointer hover:bg-amber-50">
+                                    <input type="checkbox" name="newUserScopes" value="範疇二" onchange="syncNewUserAllCheckbox()" class="rounded text-amber-600 focus:ring-amber-500">
+                                    <span>範疇二</span>
+                                </label>
+                                <label class="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-amber-200/60 cursor-pointer hover:bg-amber-50">
+                                    <input type="checkbox" name="newUserScopes" value="範疇三" onchange="syncNewUserAllCheckbox()" class="rounded text-amber-600 focus:ring-amber-500">
+                                    <span>範疇三</span>
+                                </label>
+                                <label class="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-amber-200/60 cursor-pointer hover:bg-amber-50">
+                                    <input type="checkbox" name="newUserScopes" value="範疇四" onchange="syncNewUserAllCheckbox()" class="rounded text-amber-600 focus:ring-amber-500">
+                                    <span>範疇四</span>
+                                </label>
                             </div>
                         </div>
                         <div class="flex justify-end pt-1">
                             <button type="submit" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs shadow cursor-pointer flex items-center gap-1">
-                                <span>✨</span> 新增使用者
+                                <span>✨</span> 儲存使用者設定
                             </button>
                         </div>
                     </form>
@@ -656,7 +687,7 @@
                     <!-- 現有帳號列表 -->
                     <div class="space-y-2">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-xs font-black text-emerald-950">📋 目前系統帳號清單</h4>
+                            <h4 class="text-xs font-black text-emerald-950">📋 目前系統帳號清單（點擊範疇標籤可直接調整權限）</h4>
                             <span id="userTotalCount" class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">共 4 組帳號</span>
                         </div>
                         <div class="border border-emerald-200 rounded-2xl overflow-hidden bg-white">
@@ -667,7 +698,7 @@
                                             <th class="py-2.5 px-3">登入帳號</th>
                                             <th class="py-2.5 px-3">顯示名稱</th>
                                             <th class="py-2.5 px-3">登入密碼</th>
-                                            <th class="py-2.5 px-3">權限角色</th>
+                                            <th class="py-2.5 px-3">授權可見範疇</th>
                                             <th class="py-2.5 px-3 text-center">操作</th>
                                         </tr>
                                     </thead>
@@ -798,232 +829,203 @@
                 status: '已送單',
                 applicant: '吳佩珊 講師',
                 notes: '財添單已由系辦核章送出至總務處採購組收件。'
-            },
-            {
-                id: '8',
-                scope: '範疇四',
-                subProject: '精實醫療中心',
-                budget: '150萬以上',
-                item: '全自動光學檢測(AOI)教學模擬機台',
-                serial: '115-P03-0033',
-                status: '未採購',
-                applicant: '劉國華 教授',
-                notes: '規格書草擬中，下週召開系務設備規劃會議確認最終規格參數。'
             }
         ];
 
-        // 應用程式狀態
+        // 全域狀態變數
+        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzI6jNhpGRzHZNt8rfXaTp937xdOvG9jCY8RBurzQbe7EVcvnsbXrBAvyW5VNUUeNuI/exec';
+        let gasWebAppUrl = DEFAULT_GAS_URL;
         let procurementList = [];
+        let currentFilteredList = [];
         let deleteTargetId = null;
         let statusChartInstance = null;
         let budgetChartInstance = null;
         let selectedDashboardScope = 'ALL';
-        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzI6jNhpGRzHZNt8rfXaTp937xdOvG9jCY8RBurzQbe7EVcvnsbXrBAvyW5VNUUeNuI/exec';
-        let gasWebAppUrl = '';
-        
-        // 預設帳號設定與動態帳號庫 (支援管理者新增、修改密碼、刪除使用者)
+
+        // 預設帳號設定與動態帳號庫
         const DEFAULT_ACCOUNTS = {
-            admin: { password: '888', role: 'admin', label: '管理者 (admin)', icon: '👑', isSystemAdmin: true },
-            '使用者1': { password: 'password', role: 'user', label: '使用者1', icon: '🔍' },
-            '使用者2': { password: 'password', role: 'user', label: '使用者2', icon: '🔍' },
-            '使用者3': { password: 'password', role: 'user', label: '使用者3', icon: '🔍' }
+            'admin':   { password: '888', role: 'admin', label: '管理者 (admin)', scopes: ['ALL'] },
+            'test2': { password: 'password', role: 'investigator', label: '林如胤', scopes: ['範疇一'] },
+            'test1': { password: 'password', role: 'investigator', label: '賴愉婷', scopes: ['範疇二'] },
+            'test3': { password: 'password', role: 'investigator', label: '張立功', scopes: ['範疇三'] },
+            'test4': { password: 'password', role: 'investigator', label: '林曉玲', scopes: ['範疇四'] }
         };
-        let ACCOUNTS = {};
-        let currentRole = null;
-        let currentAccountLabel = '';
-        let currentUsername = '';
 
-        function loadAccounts() {
-            try {
-                const saved = localStorage.getItem('deep_cultivation_accounts_v1');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    ACCOUNTS = { ...DEFAULT_ACCOUNTS, ...parsed };
-                } else {
-                    ACCOUNTS = JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
-                    saveAccounts();
+        let userAccounts = {};
+        let currentUserRole = null;
+        let currentAccountName = null;
+        let currentAccountLabel = null;
+        let currentUserScopes = ['ALL'];
+        let pendingExcelRows = [];
+
+        function loadUserAccounts() {
+            const saved = localStorage.getItem('deepCultivationUsers_v2');
+            if (saved) {
+                try {
+                    userAccounts = JSON.parse(saved);
+                    if (!userAccounts['admin']) {
+                        userAccounts['admin'] = { ...DEFAULT_ACCOUNTS['admin'] };
+                    }
+                    Object.keys(userAccounts).forEach(acc => {
+                        if (!Array.isArray(userAccounts[acc].scopes) || userAccounts[acc].scopes.length === 0) {
+                            userAccounts[acc].scopes = ['ALL'];
+                        }
+                    });
+                } catch (e) {
+                    userAccounts = JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
                 }
-            } catch (e) {
-                console.error('讀取帳號資料失敗:', e);
-                ACCOUNTS = JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
-            }
-        }
-
-        function saveAccounts() {
-            try {
-                localStorage.setItem('deep_cultivation_accounts_v1', JSON.stringify(ACCOUNTS));
-            } catch (e) {
-                console.error('儲存帳號資料失敗:', e);
-            }
-        }
-
-        // 初始化載入
-        window.onload = async function () {
-            loadAccounts();
-            const savedUrl = localStorage.getItem('deep_cultivation_gas_url');
-            gasWebAppUrl = savedUrl !== null ? savedUrl : DEFAULT_GAS_URL;
-            
-            // 檢查目前分頁是否已登入 (使用 sessionStorage，關閉分頁或重新進入需重新登入)
-            const savedSessionRole = sessionStorage.getItem('deep_cultivation_session_role');
-            const savedSessionLabel = sessionStorage.getItem('deep_cultivation_session_label');
-            const savedSessionUser = sessionStorage.getItem('deep_cultivation_session_user');
-            if (savedSessionRole === 'admin' || savedSessionRole === 'user') {
-                currentRole = savedSessionRole;
-                currentAccountLabel = savedSessionLabel || (savedSessionRole === 'admin' ? '管理者 (admin)' : '使用者1');
-                currentUsername = savedSessionUser || (savedSessionRole === 'admin' ? 'admin' : '使用者1');
-                document.getElementById('loginOverlay').classList.add('hidden');
-                applyRolePermissions();
-                await initSystemData();
             } else {
-                // 尚未登入，顯示登入遮罩並聚焦帳號輸入框
-                document.getElementById('loginOverlay').classList.remove('hidden');
-                setTimeout(() => document.getElementById('loginUsername').focus(), 100);
-            }
-        };
-
-        // 初始化系統資料載入
-        async function initSystemData() {
-            loadData();
-            updateLastUpdatedTime();
-            renderAll();
-
-            if (gasWebAppUrl) {
-                await fetchFromGoogleSheet(false);
+                userAccounts = JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
+                saveUserAccounts();
             }
         }
 
-        // ==================== 登入與權限管理函式 ====================
-        function togglePasswordVisibility() {
-            const pwdInput = document.getElementById('loginPassword');
-            const toggleBtn = document.getElementById('togglePasswordBtn');
-            if (pwdInput.type === 'password') {
-                pwdInput.type = 'text';
-                toggleBtn.textContent = '🙈';
-                toggleBtn.title = '隱藏密碼';
-            } else {
-                pwdInput.type = 'password';
-                toggleBtn.textContent = '👁️';
-                toggleBtn.title = '顯示密碼';
-            }
+        function saveUserAccounts() {
+            localStorage.setItem('deepCultivationUsers_v2', JSON.stringify(userAccounts));
+        }
+
+        function isAllScopesAllowed(scopes = currentUserScopes) {
+            return Array.isArray(scopes) && scopes.includes('ALL');
+        }
+
+        function getAuthorizedScopeList(scopes = currentUserScopes) {
+            const allScopes = Object.keys(SCOPE_SUBPROJECTS);
+            if (isAllScopesAllowed(scopes)) return allScopes;
+            return allScopes.filter(s => scopes.includes(s));
+        }
+
+        function getAuthorizedProcurementList() {
+            if (isAllScopesAllowed()) return procurementList;
+            return procurementList.filter(item => currentUserScopes.includes(item.scope));
+        }
+
+        function formatScopeBadgeText(scopes) {
+            if (!scopes || scopes.includes('ALL')) return '🌐 全部範疇';
+            return scopes.join('、');
         }
 
         function checkPasswordMatch() {
             const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value;
-            const pwdInput = document.getElementById('loginPassword');
-            const statusIcon = document.getElementById('passwordStatusIcon');
-            const matchBadge = document.getElementById('passwordMatchBadge');
+            const passwordInput = document.getElementById('loginPassword');
+            const password = passwordInput.value;
+            const badge = document.getElementById('passwordMatchBadge');
+            const icon = document.getElementById('passwordStatusIcon');
 
-            // 尚未輸入密碼時恢復預設外觀
             if (!password) {
-                statusIcon.classList.add('hidden');
-                matchBadge.classList.add('hidden');
-                pwdInput.classList.remove('border-emerald-500', 'bg-emerald-50/80', 'border-rose-400', 'bg-rose-50/50');
-                pwdInput.classList.add('border-emerald-200', 'bg-emerald-50/40');
+                badge.classList.add('hidden');
+                icon.classList.add('hidden');
+                passwordInput.classList.remove('border-emerald-500', 'bg-emerald-50/70', 'border-rose-400', 'bg-rose-50/50');
+                passwordInput.classList.add('border-emerald-200', 'bg-emerald-50/40');
                 return;
             }
 
-            const account = ACCOUNTS[username];
-            statusIcon.classList.remove('hidden');
-            matchBadge.classList.remove('hidden');
+            badge.classList.remove('hidden');
+            icon.classList.remove('hidden');
 
+            const account = userAccounts[username];
             if (!account) {
-                statusIcon.textContent = '❓';
-                matchBadge.textContent = '⚠️ 請先輸入有效帳號';
-                matchBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800';
-                pwdInput.classList.remove('border-emerald-500', 'bg-emerald-50/80', 'border-rose-400', 'bg-rose-50/50');
-                pwdInput.classList.add('border-emerald-200', 'bg-emerald-50/40');
+                badge.textContent = '⚠️ 請先輸入有效帳號';
+                badge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
+                icon.textContent = '⚠️';
+                passwordInput.classList.remove('border-emerald-500', 'bg-emerald-50/70');
+                passwordInput.classList.add('border-amber-400', 'bg-amber-50/40');
             } else if (account.password === password) {
-                statusIcon.textContent = '✅';
-                matchBadge.textContent = `✅ 密碼正確 (${account.icon} ${account.label.split(' ')[0]})`;
-                matchBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
-                pwdInput.classList.remove('border-emerald-200', 'bg-emerald-50/40', 'border-rose-400', 'bg-rose-50/50');
-                pwdInput.classList.add('border-emerald-500', 'bg-emerald-50/80');
+                badge.textContent = '✅ 密碼正確';
+                badge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
+                icon.textContent = '✅';
+                passwordInput.classList.remove('border-rose-400', 'bg-rose-50/50', 'border-amber-400', 'bg-amber-50/40', 'border-emerald-200');
+                passwordInput.classList.add('border-emerald-500', 'bg-emerald-50/70');
             } else {
-                statusIcon.textContent = '❌';
-                matchBadge.textContent = '❌ 密碼尚未符合';
-                matchBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700';
-                pwdInput.classList.remove('border-emerald-200', 'bg-emerald-50/40', 'border-emerald-500', 'bg-emerald-50/80');
-                pwdInput.classList.add('border-rose-400', 'bg-rose-50/50');
+                badge.textContent = '❌ 密碼尚未符合';
+                badge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300';
+                icon.textContent = '❌';
+                passwordInput.classList.remove('border-emerald-500', 'bg-emerald-50/70', 'border-amber-400', 'bg-amber-50/40', 'border-emerald-200');
+                passwordInput.classList.add('border-rose-400', 'bg-rose-50/50');
             }
         }
 
-        async function handleLogin(event) {
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('loginPassword');
+            const toggleBtn = document.getElementById('togglePasswordBtn');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+            }
+        }
+
+        function handleLogin(event) {
             event.preventDefault();
             const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value;
-            const errorBox = document.getElementById('loginErrorMsg');
+            const password = document.getElementById('loginPassword').value.trim();
+            const errorMsg = document.getElementById('loginErrorMsg');
 
-            const account = ACCOUNTS[username];
+            const account = userAccounts[username];
             if (account && account.password === password) {
-                errorBox.classList.add('hidden');
-                currentRole = account.role;
-                currentAccountLabel = account.label;
-                currentUsername = username;
-                sessionStorage.setItem('deep_cultivation_session_role', currentRole);
-                sessionStorage.setItem('deep_cultivation_session_label', currentAccountLabel);
-                sessionStorage.setItem('deep_cultivation_session_user', currentUsername);
-
-                // 隱藏登入遮罩並套用權限
+                errorMsg.classList.add('hidden');
+                sessionStorage.setItem('deepCultivationAuthAccount', username);
+                applyAuthRole(username);
                 document.getElementById('loginOverlay').classList.add('hidden');
-                document.getElementById('loginForm').reset();
-                document.getElementById('loginPassword').type = 'password';
-                document.getElementById('togglePasswordBtn').textContent = '👁️';
-                checkPasswordMatch();
-                applyRolePermissions();
-                await initSystemData();
-                showToast(`${account.icon} 歡迎登入！目前為「${account.label}」`);
+                showToast(`歡迎登入！目前身分：${account.label}`, '🎉');
+                initSystemAfterLogin();
             } else {
-                errorBox.classList.remove('hidden');
+                errorMsg.classList.remove('hidden');
+                showToast('帳號或密碼錯誤，請再試一次！', '⚠️');
+            }
+        }
+
+        function applyAuthRole(username) {
+            const account = userAccounts[username] || DEFAULT_ACCOUNTS['使用者1'];
+            currentUserRole = account.role;
+            currentAccountName = username;
+            currentAccountLabel = account.label || username;
+            currentUserScopes = Array.isArray(account.scopes) && account.scopes.length > 0 ? account.scopes : ['ALL'];
+
+            const roleIcon = document.getElementById('roleIcon');
+            const roleLabel = document.getElementById('roleLabel');
+            const btnExcelImport = document.getElementById('btnExcelImport');
+            const btnUserManage = document.getElementById('btnUserManage');
+
+            if (account.role === 'admin') {
+                roleIcon.textContent = '👑';
+                roleLabel.textContent = `${currentAccountLabel} (完整權限)`;
+                btnExcelImport.classList.remove('hidden');
+                btnUserManage.classList.remove('hidden');
+            } else {
+                roleIcon.textContent = '🔍';
+                const scopeHint = isAllScopesAllowed() ? '全部範疇' : currentUserScopes.join('、');
+                roleLabel.textContent = `${currentAccountLabel} (${scopeHint})`;
+                btnExcelImport.classList.add('hidden');
+                btnUserManage.classList.add('hidden');
+            }
+
+            const allowedScopes = getAuthorizedScopeList();
+            if (!isAllScopesAllowed() && !allowedScopes.includes(selectedDashboardScope)) {
+                selectedDashboardScope = allowedScopes.length === 1 ? allowedScopes[0] : 'ALL';
             }
         }
 
         function handleLogout() {
-            currentRole = null;
-            currentAccountLabel = '';
-            currentUsername = '';
-            sessionStorage.removeItem('deep_cultivation_session_role');
-            sessionStorage.removeItem('deep_cultivation_session_label');
-            sessionStorage.removeItem('deep_cultivation_session_user');
-            document.getElementById('loginErrorMsg').classList.add('hidden');
-            document.getElementById('loginForm').reset();
+            sessionStorage.removeItem('deepCultivationAuthAccount');
+            currentUserRole = null;
+            currentAccountName = null;
+            currentAccountLabel = null;
+            currentUserScopes = ['ALL'];
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
             document.getElementById('loginPassword').type = 'password';
             document.getElementById('togglePasswordBtn').textContent = '👁️';
             checkPasswordMatch();
+            document.getElementById('loginErrorMsg').classList.add('hidden');
             document.getElementById('loginOverlay').classList.remove('hidden');
-            setTimeout(() => document.getElementById('loginUsername').focus(), 100);
+            showToast('已安全登出系統', '👋');
         }
 
-        function applyRolePermissions() {
-            const roleIcon = document.getElementById('roleIcon');
-            const roleLabel = document.getElementById('roleLabel');
-            const roleBadge = document.getElementById('roleBadge');
-            const btnExcelImport = document.getElementById('btnExcelImport');
-            const btnUserManage = document.getElementById('btnUserManage');
-
-            if (currentRole === 'admin') {
-                roleIcon.textContent = '👑';
-                roleLabel.textContent = currentAccountLabel || '管理者 (admin)';
-                roleBadge.className = 'w-full sm:w-auto bg-amber-400/95 text-amber-950 border border-amber-200 font-extrabold px-4 py-2.5 rounded-2xl shadow-md flex items-center justify-center gap-1.5 text-sm';
-                if (btnExcelImport) btnExcelImport.classList.remove('hidden');
-                if (btnUserManage) btnUserManage.classList.remove('hidden');
-            } else {
-                roleIcon.textContent = '🔍';
-                roleLabel.textContent = currentAccountLabel || '使用者1';
-                roleBadge.className = 'w-full sm:w-auto bg-white/20 text-white border border-white/40 font-extrabold px-4 py-2.5 rounded-2xl shadow-md flex items-center justify-center gap-1.5 text-sm';
-                if (btnExcelImport) btnExcelImport.classList.add('hidden');
-                if (btnUserManage) btnUserManage.classList.add('hidden');
-            }
-        }
-
-        // ==================== 管理者：使用者帳號管理功能 ====================
         function openUserManageModal() {
-            if (currentRole !== 'admin') {
-                showToast('⛔ 權限不足：僅「管理者」可使用帳號管理功能！');
-                return;
-            }
-            document.getElementById('addUserForm').reset();
-            renderUserList();
+            if (currentUserRole !== 'admin') return;
+            renderUserListTable();
             document.getElementById('userManageModal').classList.remove('hidden');
         }
 
@@ -1031,340 +1033,305 @@
             document.getElementById('userManageModal').classList.add('hidden');
         }
 
-        function renderUserList() {
+        function toggleNewUserAllScopes(allCheckbox) {
+            const checkboxes = document.querySelectorAll('input[name="newUserScopes"]');
+            checkboxes.forEach(cb => {
+                cb.checked = allCheckbox.checked;
+            });
+        }
+
+        function syncNewUserAllCheckbox() {
+            const checkboxes = Array.from(document.querySelectorAll('input[name="newUserScopes"]'));
+            const allChecked = checkboxes.every(cb => cb.checked);
+            document.getElementById('newUserScopeAll').checked = allChecked;
+        }
+
+        function renderUserListTable() {
             const tbody = document.getElementById('userListTableBody');
-            const countBadge = document.getElementById('userTotalCount');
-            const keys = Object.keys(ACCOUNTS);
-            countBadge.textContent = `共 ${keys.length} 組帳號`;
+            const accounts = Object.keys(userAccounts);
+            document.getElementById('userTotalCount').textContent = `共 ${accounts.length} 組帳號`;
             tbody.innerHTML = '';
 
-            keys.forEach(username => {
-                const acc = ACCOUNTS[username];
-                const isAdmin = acc.role === 'admin';
+            accounts.forEach(acc => {
+                const info = userAccounts[acc];
+                const isAdmin = info.role === 'admin';
+                const scopes = info.scopes || ['ALL'];
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-amber-50/60 transition-colors';
+                tr.className = 'hover:bg-amber-50/40 transition-colors';
+
+                let scopeBadgesHtml = '';
+                if (isAdmin || scopes.includes('ALL')) {
+                    scopeBadgesHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">🌐 全部範疇</span>`;
+                } else {
+                    scopeBadgesHtml = scopes.map(sc =>
+                        `<span class="inline-block px-2 py-0.5 mr-1 mb-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">${escapeHtml(sc)}</span>`
+                    ).join('');
+                }
+
                 tr.innerHTML = `
-                    <td class="py-2.5 px-3 font-extrabold text-slate-800">${escapeHtml(username)}</td>
-                    <td class="py-2.5 px-3 text-slate-600">${escapeHtml(acc.label || username)}</td>
-                    <td class="py-2.5 px-3">
-                        <span class="font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">${escapeHtml(acc.password)}</span>
-                    </td>
-                    <td class="py-2.5 px-3">
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
-                            isAdmin ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                        }">
-                            ${isAdmin ? '👑 管理者' : '🔍 一般使用者'}
-                        </span>
-                    </td>
-                    <td class="py-2.5 px-3 text-center">
-                        ${acc.isSystemAdmin ? `
-                            <span class="text-[11px] text-slate-400 font-bold">系統預設</span>
-                        ` : `
-                            <button type="button" onclick="deleteUserAccount('${escapeHtml(username)}')" title="刪除此使用者"
-                                class="px-2.5 py-1 bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white rounded-lg font-bold transition-colors cursor-pointer">
-                                🗑️ 刪除
-                            </button>
-                        `}
+                    <td class="py-2.5 px-3 font-extrabold text-slate-800">${escapeHtml(acc)}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${escapeHtml(info.label || acc)}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-700 bg-slate-50/80">${escapeHtml(info.password)}</td>
+                    <td class="py-2.5 px-3">${scopeBadgesHtml}</td>
+                    <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                        ${isAdmin
+                            ? '<span class="text-[11px] text-slate-400 font-bold">系統預設</span>'
+                            : `<div class="inline-flex items-center gap-1">
+                                <button type="button" onclick="editUserIntoForm('${escapeHtml(acc)}')" class="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[11px] cursor-pointer transition-colors">✏️ 編輯</button>
+                                <button type="button" onclick="deleteUserAccount('${escapeHtml(acc)}')" class="px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-[11px] cursor-pointer transition-colors">🗑️ 刪除</button>
+                               </div>`
+                        }
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
+        function editUserIntoForm(acc) {
+            const info = userAccounts[acc];
+            if (!info) return;
+            document.getElementById('newUserAccount').value = acc;
+            document.getElementById('newUserPassword').value = info.password;
+            document.getElementById('newUserDisplayName').value = info.label || acc;
+
+            const scopes = info.scopes || ['ALL'];
+            const isAll = scopes.includes('ALL');
+            document.getElementById('newUserScopeAll').checked = isAll;
+            document.querySelectorAll('input[name="newUserScopes"]').forEach(cb => {
+                cb.checked = isAll || scopes.includes(cb.value);
+            });
+            showToast(`已載入「${acc}」設定，修改後按儲存即可更新`, '✏️');
+        }
+
         function addNewUser(event) {
             event.preventDefault();
-            if (currentRole !== 'admin') return;
+            if (currentUserRole !== 'admin') return;
 
-            const accountInput = document.getElementById('newUserAccount');
-            const passwordInput = document.getElementById('newUserPassword');
-            const displayInput = document.getElementById('newUserDisplayName');
+            const acc = document.getElementById('newUserAccount').value.trim();
+            const pwd = document.getElementById('newUserPassword').value.trim();
+            const displayName = document.getElementById('newUserDisplayName').value.trim();
 
-            const username = accountInput.value.trim();
-            const password = passwordInput.value.trim();
-            const displayName = displayInput.value.trim();
+            if (!acc || !pwd) return;
 
-            if (!username || !password) {
-                showToast('⚠️ 請填寫完整帳號與密碼！');
+            const isAllChecked = document.getElementById('newUserScopeAll').checked;
+            const checkedScopes = Array.from(document.querySelectorAll('input[name="newUserScopes"]:checked')).map(cb => cb.value);
+
+            if (!isAllChecked && checkedScopes.length === 0) {
+                showToast('請至少勾選一個授權可檢視的範疇！', '⚠️');
                 return;
             }
 
-            if (ACCOUNTS[username]) {
-                // 若帳號已存在則更新其密碼與顯示名稱
-                ACCOUNTS[username].password = password;
-                if (displayName) ACCOUNTS[username].label = displayName;
-                saveAccounts();
-                renderUserList();
-                document.getElementById('addUserForm').reset();
-                showToast(`✅ 已更新使用者「${username}」的密碼與資料！`);
-                return;
-            }
+            const finalScopes = (isAllChecked || checkedScopes.length === Object.keys(SCOPE_SUBPROJECTS).length)
+                ? ['ALL']
+                : checkedScopes;
 
-            ACCOUNTS[username] = {
-                password: password,
-                role: 'user',
-                label: displayName || username,
-                icon: '🔍'
+            const isUpdate = Boolean(userAccounts[acc]);
+            const existingRole = isUpdate ? userAccounts[acc].role : 'investigator';
+
+            userAccounts[acc] = {
+                password: pwd,
+                role: existingRole,
+                label: displayName || acc,
+                scopes: existingRole === 'admin' ? ['ALL'] : finalScopes
             };
 
-            saveAccounts();
-            renderUserList();
+            saveUserAccounts();
+            renderUserListTable();
             document.getElementById('addUserForm').reset();
-            showToast(`🎉 已成功新增使用者「${username}」！`);
+            showToast(isUpdate ? `已更新帳號「${acc}」的密碼與範疇權限！` : `已新增使用者「${acc}」！`, '✅');
         }
 
-        function deleteUserAccount(username) {
-            if (currentRole !== 'admin') return;
-            if (!ACCOUNTS[username] || ACCOUNTS[username].isSystemAdmin) return;
-
-            delete ACCOUNTS[username];
-            saveAccounts();
-            renderUserList();
-            showToast(`🗑️ 已刪除使用者「${username}」`);
+        function deleteUserAccount(acc) {
+            if (currentUserRole !== 'admin' || acc === 'admin') return;
+            delete userAccounts[acc];
+            saveUserAccounts();
+            renderUserListTable();
+            showToast(`已移除使用者帳號「${acc}」`, '🗑️');
         }
 
-        // 格式化並更新「最後更新時間：YYYY年MM月DD日 HH:mm」
-        function updateLastUpdatedTime() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const formatted = `${year}年${month}月${day}日 ${hours}:${minutes}`;
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserAccounts();
+            const savedAccount = sessionStorage.getItem('deepCultivationAuthAccount');
+            if (savedAccount && userAccounts[savedAccount]) {
+                applyAuthRole(savedAccount);
+                document.getElementById('loginOverlay').classList.add('hidden');
+                initSystemAfterLogin();
+            }
+        });
 
+        function initSystemAfterLogin() {
+            loadData();
+            updateDashboard();
+            filterData();
+            fetchFromGoogleSheet(false);
+        }
+
+        function formatDateTime(date = new Date()) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            const hh = String(date.getHours()).padStart(2, '0');
+            const mm = String(date.getMinutes()).padStart(2, '0');
+            return `${y}年${m}月${d}日 ${hh}:${mm}`;
+        }
+
+        function setLastUpdated(timestampStr) {
+            const finalStr = timestampStr || formatDateTime(new Date());
+            localStorage.setItem('deepCultivationLastUpdated', finalStr);
             const el = document.getElementById('lastUpdatedDisplay');
             if (el) {
-                el.textContent = `🕒 最後更新：${formatted}`;
-            }
-        }
-
-        // 從 Google Sheets 讀取最新資料並自動帶入網頁
-        async function fetchFromGoogleSheet(showNotification = false) {
-            if (!gasWebAppUrl) return;
-            try {
-                if (showNotification) {
-                    showToast('⏳ 正在從 Google Sheets 讀取最新資料...');
-                }
-                const response = await fetch(gasWebAppUrl);
-                const result = await response.json();
-
-                if (result.status === 'success' && Array.isArray(result.data)) {
-                    procurementList = result.data;
-                    saveToStorage();
-                    renderAll();
-                    if (showNotification) {
-                        showToast(`✅ 已成功從試算表載入 ${procurementList.length} 筆最新資料！`);
-                    }
-                } else {
-                    console.warn('Google Sheets 回傳格式異常:', result);
-                    if (showNotification) {
-                        showToast('⚠️ 讀取 Google Sheets 異常，請確認 Apps Script 已重新部署');
-                    }
-                }
-            } catch (err) {
-                console.error('讀取 Google Sheets 失敗:', err);
-                if (showNotification) {
-                    showToast('⚠️ 無法連線至 Google Sheets，目前顯示本地快取資料');
-                }
-            }
-        }
-
-        // 傳送資料至 Google Apps Script
-        async function sendToGoogleSheet(payload) {
-            if (!gasWebAppUrl) return;
-            try {
-                // 自動夾帶目前登入帳號的「顯示名稱 / 單位備註」作為編輯者
-                const enrichedPayload = {
-                    ...payload,
-                    editor: currentAccountLabel || currentUsername || ''
-                };
-                // 使用 text/plain 避免 CORS 預檢 (Preflight) 阻擋，Apps Script 仍可透過 e.postData.contents 完整解析 JSON
-                await fetch(gasWebAppUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8'
-                    },
-                    body: JSON.stringify(enrichedPayload)
-                });
-            } catch (err) {
-                console.error('同步至 Google Sheets 發生錯誤:', err);
-                showToast('⚠️ 雲端同步發生錯誤，資料已先存於本機');
-            }
-        }
-
-        // 儲存案件 (新增或修改)
-        function saveCase(event) {
-            event.preventDefault();
-
-            const id = document.getElementById('caseId').value;
-            const caseData = {
-                id: id || Date.now().toString(),
-                scope: document.getElementById('fieldScope').value.trim(),
-                subProject: document.getElementById('fieldSubProject').value.trim(),
-                item: document.getElementById('fieldItem').value.trim(),
-                budget: document.getElementById('fieldBudget').value,
-                serial: document.getElementById('fieldSerial').value.trim(),
-                status: document.getElementById('fieldStatus').value,
-                applicant: document.getElementById('fieldApplicant').value.trim(),
-                notes: document.getElementById('fieldNotes').value.trim(),
-                editor: currentAccountLabel || currentUsername || ''
-            };
-
-            if (id) {
-                const index = procurementList.findIndex(item => String(item.id) === String(id));
-                if (index !== -1) {
-                    procurementList[index] = caseData;
-                }
-                showToast('✨ 採購案件已成功修改！');
-            } else {
-                procurementList.unshift(caseData);
-                showToast('🎉 新採購案件已加入追蹤清單！');
-            }
-
-            saveToStorage();
-            renderAll();
-            closeModal();
-            sendToGoogleSheet({ action: 'upsert', data: caseData });
-        }
-
-        // 刪除案件
-        function openDeleteModal(id, itemName) {
-            if (currentRole !== 'admin') {
-                showToast('⛔ 權限不足：僅「管理者」可刪除採購案件！');
-                return;
-            }
-            deleteTargetId = String(id);
-            document.getElementById('deleteTargetName').textContent = `「${itemName}」`;
-            document.getElementById('deleteModal').classList.remove('hidden');
-        }
-
-        function closeDeleteModal() {
-            deleteTargetId = null;
-            document.getElementById('deleteModal').classList.add('hidden');
-        }
-
-        function confirmDelete() {
-            if (currentRole !== 'admin') {
-                showToast('⛔ 權限不足：僅「管理者」可刪除採購案件！');
-                closeDeleteModal();
-                return;
-            }
-            if (!deleteTargetId) return;
-            const targetId = String(deleteTargetId);
-            procurementList = procurementList.filter(item => String(item.id) !== targetId);
-            saveToStorage();
-            renderAll();
-            closeDeleteModal();
-            showToast('🗑️ 採購案件已刪除');
-            sendToGoogleSheet({ action: 'delete', id: targetId });
-        }
-
-        // 本地儲存 (localStorage)
-        function saveToStorage() {
-            try {
-                localStorage.setItem('deep_cultivation_procurement_v1', JSON.stringify(procurementList));
-                updateLastUpdatedTime();
-            } catch (e) {
-                console.error('無法儲存至 localStorage:', e);
+                el.textContent = `🕒 最後更新：${finalStr}`;
             }
         }
 
         function loadData() {
-            try {
-                const saved = localStorage.getItem('deep_cultivation_procurement_v1');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed)) {
-                        procurementList = parsed;
-                        return;
-                    }
+            const saved = localStorage.getItem('deepCultivationProcurements_v1');
+            if (saved) {
+                try {
+                    procurementList = JSON.parse(saved);
+                } catch (e) {
+                    procurementList = [...DEFAULT_DATA];
                 }
+            } else {
                 procurementList = [...DEFAULT_DATA];
                 saveToStorage();
-            } catch (e) {
-                console.error('讀取本地資料失敗，使用預設資料:', e);
-                procurementList = [...DEFAULT_DATA];
+            }
+            const savedTime = localStorage.getItem('deepCultivationLastUpdated');
+            setLastUpdated(savedTime || formatDateTime(new Date()));
+        }
+
+        function saveToStorage(updateTime = true) {
+            localStorage.setItem('deepCultivationProcurements_v1', JSON.stringify(procurementList));
+            if (updateTime) {
+                setLastUpdated(formatDateTime(new Date()));
             }
         }
 
-        // 渲染所有畫面 (KPI、圖表、表格)
-        function renderAll() {
-            updateDashboard();
-            filterData();
+        async function fetchFromGoogleSheet(isManual = false) {
+            if (!gasWebAppUrl) return;
+            try {
+                if (isManual) showToast('正在從 Google Sheets 讀取最新資料...', '🔄');
+                const response = await fetch(gasWebAppUrl, { method: 'GET' });
+                const result = await response.json();
+
+                if (result.status === 'success' && Array.isArray(result.data)) {
+                    procurementList = result.data.map((item, index) => ({
+                        id: item.id ? String(item.id) : String(Date.now() + index),
+                        scope: item.scope || '',
+                        subProject: item.subProject || '',
+                        item: item.item || '',
+                        budget: item.budget === '150萬以上' ? '150萬以上' : '150萬以下',
+                        serial: item.serial || '',
+                        status: STATUS_CONFIG[item.status] ? item.status : '未採購',
+                        applicant: item.applicant || '',
+                        notes: item.notes || ''
+                    }));
+                    saveToStorage(true);
+                    updateDashboard();
+                    filterData();
+                    if (isManual) {
+                        showToast(`已成功從試算表帶入 ${procurementList.length} 筆資料！`, '✅');
+                    }
+                } else {
+                    throw new Error(result.message || '回傳資料格式異常');
+                }
+            } catch (error) {
+                console.error('從 Google Sheets 讀取失敗:', error);
+                if (isManual) {
+                    showToast('讀取試算表失敗，請確認 Apps Script 已重新部署為新版本！', '⚠️');
+                }
+            }
         }
 
-        // 更新儀表板 KPI 與圖表
+        async function sendToGoogleSheet(payload) {
+            if (!gasWebAppUrl) return;
+            try {
+                payload.editor = currentAccountLabel || currentAccountName || '未知使用者';
+                await fetch(gasWebAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (error) {
+                console.error('Google Sheets 同步失敗:', error);
+                showToast('雲端同步異常，請檢查網路或網址設定', '⚠️');
+            }
+        }
+
         function updateDashboard() {
-            const total = procurementList.length;
-            const over150 = procurementList.filter(item => item.budget === '150萬以上').length;
-            const closedCount = procurementList.filter(item => item.status === '結案').length;
-            const activeCount = total - closedCount;
-            const rate = total > 0 ? Math.round((closedCount / total) * 100) : 0;
+            const visibleList = getAuthorizedProcurementList();
+            const total = visibleList.length;
+            const over150 = visibleList.filter(i => i.budget === '150萬以上').length;
+            const under150 = visibleList.filter(i => i.budget === '150萬以下').length;
+            const closed = visibleList.filter(i => i.status === '結案').length;
+            const active = total - closed;
+            const rate = total === 0 ? 0 : Math.round((closed / total) * 100);
 
             document.getElementById('kpi-total').textContent = total;
             document.getElementById('kpi-over150').textContent = over150;
-            document.getElementById('kpi-active').textContent = activeCount;
+            document.getElementById('kpi-active').textContent = active;
             document.getElementById('kpi-rate').textContent = `${rate}%`;
-            document.getElementById('kpi-closed-count').textContent = `${closedCount} 件結案`;
+            document.getElementById('kpi-closed-count').textContent = `${closed} 件結案`;
             document.getElementById('kpi-progress-bar').style.width = `${rate}%`;
 
-            // 統計各狀態數量
-            const statusCounts = ALL_STATUSES.map(st =>
-                procurementList.filter(item => item.status === st).length
-            );
+            const statusCounts = ALL_STATUSES.map(status => visibleList.filter(i => i.status === status).length);
+            const statusColors = ALL_STATUSES.map(status => STATUS_CONFIG[status].chartColor);
 
-            // 更新長條圖
-            const statusCtx = document.getElementById('statusChart').getContext('2d');
-            if (statusChartInstance) {
-                statusChartInstance.destroy();
-            }
-            statusChartInstance = new Chart(statusCtx, {
+            const ctxStatus = document.getElementById('statusChart').getContext('2d');
+            if (statusChartInstance) statusChartInstance.destroy();
+            statusChartInstance = new Chart(ctxStatus, {
                 type: 'bar',
                 data: {
-                    labels: ALL_STATUSES.map(st => `${STATUS_CONFIG[st].emoji} ${st}`),
+                    labels: ALL_STATUSES.map(s => `${STATUS_CONFIG[s].emoji} ${s}`),
                     datasets: [{
-                        label: '案件數量',
+                        label: '案件數量 (件)',
                         data: statusCounts,
-                        backgroundColor: ALL_STATUSES.map(st => STATUS_CONFIG[st].chartColor),
+                        backgroundColor: statusColors,
                         borderRadius: 10,
-                        borderSkipped: false
+                        borderSkipped: false,
+                        barPercentage: 0.65
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(6, 78, 59, 0.9)',
+                            padding: 12,
+                            cornerRadius: 12,
+                            titleFont: { family: 'Noto Sans TC', size: 13 },
+                            bodyFont: { family: 'Noto Sans TC', size: 14, weight: 'bold' }
+                        }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: { stepSize: 1, precision: 0 },
+                            ticks: { stepSize: 1, font: { family: 'Noto Sans TC', weight: 'bold' }, color: '#065f46' },
                             grid: { color: 'rgba(16, 185, 129, 0.1)' }
                         },
                         x: {
+                            ticks: { font: { family: 'Noto Sans TC', size: 11, weight: 'bold' }, color: '#064e3b' },
                             grid: { display: false }
                         }
                     }
                 }
             });
 
-            // 統計金額級距數量
-            const under150 = total - over150;
-            const budgetCtx = document.getElementById('budgetChart').getContext('2d');
-            if (budgetChartInstance) {
-                budgetChartInstance.destroy();
-            }
-            budgetChartInstance = new Chart(budgetCtx, {
+            const ctxBudget = document.getElementById('budgetChart').getContext('2d');
+            if (budgetChartInstance) budgetChartInstance.destroy();
+            budgetChartInstance = new Chart(ctxBudget, {
                 type: 'doughnut',
                 data: {
                     labels: ['💎 150萬以上', '💵 150萬以下'],
                     datasets: [{
                         data: [over150, under150],
                         backgroundColor: ['#f59e0b', '#10b981'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                        hoverOffset: 8
                     }]
                 },
                 options: {
@@ -1376,106 +1343,125 @@
                             position: 'bottom',
                             labels: {
                                 padding: 16,
-                                font: { weight: 'bold' }
+                                font: { family: 'Noto Sans TC', size: 12, weight: 'bold' },
+                                color: '#064e3b',
+                                usePointStyle: true,
+                                pointStyle: 'circle'
                             }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(6, 78, 59, 0.9)',
+                            padding: 12,
+                            cornerRadius: 12
                         }
                     }
                 }
             });
 
-            // 同步更新各範疇及子計畫採購進度總覽
             renderScopeAndSubProjectProgress();
         }
 
-        // 切換儀表板「各範疇及子計畫採購進度」的分頁
         function selectDashboardScope(scope) {
             selectedDashboardScope = scope;
+            renderScopeAndSubProjectProgress();
+        }
+
+        function quickFilterBySubProject(subProjectName) {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = subProjectName;
+            filterData();
+            searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showToast(`已篩選顯示「${subProjectName}」的採購案件`, '🔍');
+        }
+
+        function renderScopeAndSubProjectProgress() {
+            const visibleList = getAuthorizedProcurementList();
+            const allowedScopes = getAuthorizedScopeList();
+            const summaryContainer = document.getElementById('scopeSummaryContainer');
+            const subGrid = document.getElementById('subProjectProgressGrid');
+            if (!summaryContainer || !subGrid) return;
+
             document.querySelectorAll('.scope-tab-btn').forEach(btn => {
-                const isSelected = btn.getAttribute('data-scope') === scope;
-                if (isSelected) {
+                const btnScope = btn.getAttribute('data-scope');
+                if (btnScope === 'ALL') {
+                    btn.classList.toggle('hidden', allowedScopes.length <= 1);
+                } else {
+                    btn.classList.toggle('hidden', !allowedScopes.includes(btnScope));
+                }
+
+                if (btnScope === selectedDashboardScope) {
                     btn.className = 'scope-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer bg-emerald-600 text-white shadow-xs';
                 } else {
                     btn.className = 'scope-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer text-emerald-900 hover:bg-white/70';
                 }
             });
-            renderScopeAndSubProjectProgress();
-        }
 
-        // 點擊子計畫卡片時，直接帶入下方搜尋並捲動至明細表
-        function quickFilterBySubProject(subProject) {
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.value = subProject;
-                filterData();
-                searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                showToast(`🔍 已為您篩選「${subProject}」的採購案件`);
-            }
-        }
-
-        // 渲染各範疇摘要與子計畫採購進度卡片
-        function renderScopeAndSubProjectProgress() {
-            const summaryContainer = document.getElementById('scopeSummaryContainer');
-            const subGrid = document.getElementById('subProjectProgressGrid');
-            if (!summaryContainer || !subGrid) return;
-
-            const allScopes = Object.keys(SCOPE_SUBPROJECTS);
-
-            // 1. 渲染四大範疇彙總進度卡
             summaryContainer.innerHTML = '';
-            allScopes.forEach(scopeName => {
-                const items = procurementList.filter(i => i.scope === scopeName);
-                const total = items.length;
-                const closed = items.filter(i => i.status === '結案').length;
-                const unstarted = items.filter(i => i.status === '未採購').length;
-                const inProgress = total - closed - unstarted;
+            allowedScopes.forEach(scopeName => {
+                const scopeItems = visibleList.filter(i => i.scope === scopeName);
+                const total = scopeItems.length;
+                const closed = scopeItems.filter(i => i.status === '結案').length;
+                const active = total - closed;
                 const rate = total > 0 ? Math.round((closed / total) * 100) : 0;
-                const isActive = selectedDashboardScope === scopeName;
+                const isSelected = selectedDashboardScope === scopeName;
 
                 const card = document.createElement('div');
-                card.onclick = () => selectDashboardScope(isActive ? 'ALL' : scopeName);
-                card.className = `p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                    isActive
-                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-md scale-[1.02]'
-                        : 'bg-white/85 hover:bg-emerald-50/90 text-slate-800 border-emerald-200/80 shadow-2xs'
+                card.onclick = () => selectDashboardScope(isSelected && allowedScopes.length > 1 ? 'ALL' : scopeName);
+                card.className = `rounded-2xl p-3.5 border transition-all cursor-pointer ${
+                    isSelected
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-md scale-[1.01]'
+                        : 'bg-emerald-50/80 hover:bg-emerald-100/80 text-emerald-950 border-emerald-200/80'
                 }`;
+
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
-                        <span class="font-black text-sm">${escapeHtml(scopeName)}</span>
-                        <span class="text-xs font-extrabold px-2 py-0.5 rounded-full ${
-                            isActive ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
-                        }">結案率 ${rate}%</span>
+                        <span class="text-xs font-black flex items-center gap-1">
+                            <span>🎯</span> ${scopeName}
+                        </span>
+                        <span class="text-xs font-black px-2 py-0.5 rounded-full ${
+                            isSelected ? 'bg-white/20 text-white' : 'bg-emerald-200/80 text-emerald-900'
+                        }">
+                            結案率 ${rate}%
+                        </span>
                     </div>
-                    <div class="mt-2 flex items-center justify-between text-[11px] font-bold ${isActive ? 'text-emerald-100' : 'text-slate-500'}">
-                        <span>總計 ${total} 件</span>
-                        <span>進行中 ${inProgress} / 結案 ${closed}</span>
+                    <div class="flex items-baseline justify-between mt-2">
+                        <div class="text-lg font-black">
+                            ${total} <span class="text-xs font-bold opacity-80">件總案</span>
+                        </div>
+                        <div class="text-[11px] font-bold opacity-90">
+                            進行中 ${active} ・ 結案 ${closed}
+                        </div>
                     </div>
-                    <div class="w-full h-2 rounded-full mt-2 overflow-hidden ${isActive ? 'bg-emerald-900/40' : 'bg-emerald-100'}">
-                        <div class="h-2 rounded-full transition-all duration-500 ${isActive ? 'bg-amber-300' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}" style="width: ${rate}%"></div>
+                    <div class="w-full ${isSelected ? 'bg-emerald-900/40' : 'bg-emerald-200/70'} rounded-full h-1.5 mt-2 overflow-hidden">
+                        <div class="${isSelected ? 'bg-amber-300' : 'bg-emerald-500'} h-1.5 rounded-full transition-all duration-500" style="width: ${rate}%"></div>
                     </div>
                 `;
                 summaryContainer.appendChild(card);
             });
 
-            // 2. 整理要顯示的子計畫清單 (包含預設子計畫與資料中可能出現的其他子計畫)
-            const scopesToDisplay = selectedDashboardScope === 'ALL' ? allScopes : [selectedDashboardScope];
+            const scopesToDisplay = selectedDashboardScope === 'ALL'
+                ? allowedScopes
+                : allowedScopes.filter(s => s === selectedDashboardScope);
+
             const subProjectEntries = [];
-
-            scopesToDisplay.forEach(scopeName => {
-                const defaultSubs = SCOPE_SUBPROJECTS[scopeName] || [];
-                const dataSubs = procurementList
-                    .filter(i => i.scope === scopeName && i.subProject)
-                    .map(i => i.subProject);
-                const mergedSubs = Array.from(new Set([...defaultSubs, ...dataSubs]));
-
-                mergedSubs.forEach(subName => {
-                    subProjectEntries.push({ scope: scopeName, subProject: subName });
+            scopesToDisplay.forEach(sc => {
+                (SCOPE_SUBPROJECTS[sc] || []).forEach(sub => {
+                    subProjectEntries.push({ scope: sc, subProject: sub });
                 });
             });
 
-            // 3. 渲染子計畫詳細進度卡片
+            visibleList.forEach(item => {
+                if (scopesToDisplay.includes(item.scope) && item.subProject) {
+                    const exists = subProjectEntries.some(e => e.scope === item.scope && e.subProject === item.subProject);
+                    if (!exists) {
+                        subProjectEntries.push({ scope: item.scope, subProject: item.subProject });
+                    }
+                }
+            });
+
             subGrid.innerHTML = '';
             subProjectEntries.forEach(({ scope, subProject }) => {
-                const items = procurementList.filter(i => i.scope === scope && i.subProject === subProject);
+                const items = visibleList.filter(i => i.scope === scope && i.subProject === subProject);
                 const total = items.length;
                 const closed = items.filter(i => i.status === '結案').length;
                 const unstarted = items.filter(i => i.status === '未採購').length;
@@ -1483,7 +1469,6 @@
                 const over150 = items.filter(i => i.budget === '150萬以上').length;
                 const rate = total > 0 ? Math.round((closed / total) * 100) : 0;
 
-                // 找出該子計畫目前最主要的階段標籤
                 let latestStatusBadge = '<span class="text-[11px] font-bold text-slate-400">尚無案件</span>';
                 if (total > 0) {
                     const activeItem = items.find(i => i.status !== '結案') || items[0];
@@ -1510,7 +1495,6 @@
                             </span>
                         </div>
 
-                        <!-- 進度條 -->
                         <div class="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
                             <div class="bg-gradient-to-r from-emerald-400 to-teal-500 h-2 rounded-full transition-all duration-500" style="width: ${rate}%"></div>
                         </div>
@@ -1544,29 +1528,29 @@
             });
         }
 
-        // 篩選與搜尋資料
         function filterData() {
-            const keyword = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+            const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
             const budgetFilter = document.getElementById('filterBudget').value;
             const statusFilter = document.getElementById('filterStatus').value;
 
-            const filtered = procurementList.filter(item => {
+            const authorizedList = getAuthorizedProcurementList();
+
+            const filtered = authorizedList.filter(item => {
+                const matchKeyword = !keyword ||
+                    item.scope.toLowerCase().includes(keyword) ||
+                    item.subProject.toLowerCase().includes(keyword) ||
+                    item.item.toLowerCase().includes(keyword) ||
+                    item.serial.toLowerCase().includes(keyword) ||
+                    item.applicant.toLowerCase().includes(keyword) ||
+                    item.notes.toLowerCase().includes(keyword);
+
                 const matchBudget = budgetFilter === 'ALL' || item.budget === budgetFilter;
                 const matchStatus = statusFilter === 'ALL' || item.status === statusFilter;
-                const matchKeyword = !keyword || [
-                    item.scope,
-                    item.subProject,
-                    item.item,
-                    item.budget,
-                    item.serial,
-                    item.status,
-                    item.applicant,
-                    item.notes
-                ].some(val => String(val || '').toLowerCase().includes(keyword));
 
-                return matchBudget && matchStatus && matchKeyword;
+                return matchKeyword && matchBudget && matchStatus;
             });
 
+            currentFilteredList = filtered;
             renderTable(filtered);
         }
 
@@ -1575,71 +1559,93 @@
             document.getElementById('filterBudget').value = 'ALL';
             document.getElementById('filterStatus').value = 'ALL';
             filterData();
+            showToast('已重置所有篩選條件', '🔄');
         }
 
-        // 渲染採購案件表格
-        function renderTable(list) {
+        function renderTable(data) {
             const tbody = document.getElementById('procurementTableBody');
             const emptyState = document.getElementById('emptyState');
-            const countBadge = document.getElementById('table-count');
+            const tableCount = document.getElementById('table-count');
 
-            countBadge.textContent = `顯示 ${list.length} 筆資料`;
             tbody.innerHTML = '';
+            tableCount.textContent = `顯示 ${data.length} 筆資料`;
 
-            if (!list || list.length === 0) {
+            if (data.length === 0) {
                 emptyState.classList.remove('hidden');
                 return;
             }
             emptyState.classList.add('hidden');
 
-            list.forEach(item => {
-                const stCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG['未採購'];
+            data.forEach(item => {
+                const statusCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG['未採購'];
                 const isOver150 = item.budget === '150萬以上';
+
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-emerald-50/80 transition-colors';
+                tr.className = 'hover:bg-emerald-50/90 transition-colors duration-150 group';
 
                 tr.innerHTML = `
-                    <td class="py-3.5 px-4 whitespace-nowrap">
-                        <div class="font-extrabold text-emerald-950">${escapeHtml(item.scope)}</div>
-                        <div class="text-xs font-bold text-emerald-700 mt-0.5">🌿 ${escapeHtml(item.subProject)}</div>
+                    <td class="py-4 px-4 align-top">
+                        <div class="font-extrabold text-emerald-950 text-xs bg-emerald-100/80 inline-block px-2.5 py-1 rounded-lg mb-1">
+                            ${escapeHtml(item.scope)}
+                        </div>
+                        <div class="text-xs font-medium text-slate-600 mt-0.5">
+                            🌿 ${escapeHtml(item.subProject)}
+                        </div>
                     </td>
-                    <td class="py-3.5 px-4">
-                        <div class="font-bold text-slate-800">${escapeHtml(item.item)}</div>
+
+                    <td class="py-4 px-4 align-top">
+                        <div class="font-bold text-slate-800 text-sm leading-snug">
+                            ${escapeHtml(item.item)}
+                        </div>
                     </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap">
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold ${
+
+                    <td class="py-4 px-4 align-top whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold shadow-2xs ${
                             isOver150
-                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            ? 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border border-amber-300'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         }">
                             ${isOver150 ? '💎' : '💵'} ${escapeHtml(item.budget)}
                         </span>
                     </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap font-mono text-xs font-bold text-slate-700">
-                        ${escapeHtml(item.serial)}
-                    </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap">
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold border ${stCfg.bg} ${stCfg.text} ${stCfg.border}">
-                            ${stCfg.emoji} ${escapeHtml(item.status)}
+
+                    <td class="py-4 px-4 align-top whitespace-nowrap">
+                        <span class="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">
+                            ${escapeHtml(item.serial)}
                         </span>
                     </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap font-bold text-slate-700">
-                        ${escapeHtml(item.applicant)}
+
+                    <td class="py-4 px-4 align-top whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border} shadow-2xs">
+                            <span>${statusCfg.emoji}</span>
+                            <span>${escapeHtml(item.status)}</span>
+                        </span>
                     </td>
-                    <td class="py-3.5 px-4 text-xs text-slate-600 leading-relaxed max-w-xs">
-                        ${escapeHtml(item.notes || '—')}
+
+                    <td class="py-4 px-4 align-top whitespace-nowrap">
+                        <div class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <span class="bg-emerald-100 text-emerald-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">👤</span>
+                            ${escapeHtml(item.applicant)}
+                        </div>
                     </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap text-center">
+
+                    <td class="py-4 px-4 align-top">
+                        <p class="text-xs text-slate-600 leading-relaxed max-w-xs break-words">
+                            ${item.notes ? escapeHtml(item.notes) : '<span class="text-slate-400 italic">尚無調查說明</span>'}
+                        </p>
+                    </td>
+
+                    <td class="py-4 px-4 align-top text-center whitespace-nowrap">
                         <div class="inline-flex items-center gap-1.5">
-                            <button onclick="openModal('${escapeHtml(String(item.id))}')" title="修改案件"
-                                class="px-2.5 py-1.5 bg-sky-100 hover:bg-sky-500 text-sky-800 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer">
-                                ✏️ 修改
+                            <button onclick="openModal('${item.id}')" title="修改案件"
+                                class="p-2 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-700 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1">
+                                <span>✏️</span> 修改
                             </button>
-                            ${currentRole === 'admin' ? `
-                                <button onclick="openDeleteModal('${escapeHtml(String(item.id))}', '${escapeHtml(String(item.item))}')" title="刪除案件"
-                                    class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer">
-                                    🗑️ 刪除
-                                </button>
+                            ${currentUserRole === 'admin' ? `
+                            <button onclick="openDeleteModal('${item.id}')" title="刪除案件"
+                                class="p-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1">
+                                <span>🗑️</span> 刪除
+                            </button>
                             ` : ''}
                         </div>
                     </td>
@@ -1648,74 +1654,110 @@
             });
         }
 
-        // 範疇與子計畫下拉選單聯動
+        function populateAuthorizedScopeSelect(existingScope = '') {
+            const scopeSelect = document.getElementById('fieldScope');
+            const allowedScopes = getAuthorizedScopeList();
+            scopeSelect.innerHTML = '';
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.disabled = true;
+            defaultOpt.textContent = '請選擇範疇';
+            scopeSelect.appendChild(defaultOpt);
+
+            allowedScopes.forEach(sc => {
+                const opt = document.createElement('option');
+                opt.value = sc;
+                opt.textContent = sc;
+                scopeSelect.appendChild(opt);
+            });
+
+            if (existingScope && !allowedScopes.includes(existingScope)) {
+                const customOpt = document.createElement('option');
+                customOpt.value = existingScope;
+                customOpt.textContent = existingScope;
+                scopeSelect.appendChild(customOpt);
+            }
+        }
+
         function updateSubProjectOptions(selectedSubProject = '') {
-            const scopeVal = document.getElementById('fieldScope').value;
+            const scope = document.getElementById('fieldScope').value;
             const subSelect = document.getElementById('fieldSubProject');
-            const options = SCOPE_SUBPROJECTS[scopeVal] || [];
+            const subList = SCOPE_SUBPROJECTS[scope] || [];
 
             subSelect.innerHTML = '';
-            if (!scopeVal) {
-                subSelect.innerHTML = '<option value="" disabled selected>請先選擇範疇</option>';
+
+            if (!scope) {
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                placeholder.textContent = '請先選擇範疇';
+                subSelect.appendChild(placeholder);
                 return;
             }
 
             const defaultOpt = document.createElement('option');
             defaultOpt.value = '';
             defaultOpt.disabled = true;
+            defaultOpt.selected = !selectedSubProject;
             defaultOpt.textContent = '請選擇子計畫';
             subSelect.appendChild(defaultOpt);
 
-            options.forEach(sub => {
+            subList.forEach(sub => {
                 const opt = document.createElement('option');
                 opt.value = sub;
                 opt.textContent = sub;
-                if (sub === selectedSubProject) opt.selected = true;
+                if (sub === selectedSubProject) {
+                    opt.selected = true;
+                }
                 subSelect.appendChild(opt);
             });
 
-            // 若編輯舊資料且子計畫不在預設清單中，保留該選項避免遺失
-            if (selectedSubProject && !options.includes(selectedSubProject)) {
+            if (selectedSubProject && !subList.includes(selectedSubProject)) {
                 const customOpt = document.createElement('option');
                 customOpt.value = selectedSubProject;
-                customOpt.textContent = `${selectedSubProject} (既有資料)`;
+                customOpt.textContent = selectedSubProject;
                 customOpt.selected = true;
                 subSelect.appendChild(customOpt);
             }
-
-            if (!selectedSubProject) {
-                defaultOpt.selected = true;
-            }
         }
 
-        // 開啟新增或修改 Modal
-        function openModal(caseId = null) {
+        function openModal(id = null) {
             const modal = document.getElementById('caseModal');
+            const title = document.getElementById('modalTitle');
             const form = document.getElementById('caseForm');
-            const modalTitle = document.getElementById('modalTitle');
             form.reset();
 
-            if (caseId) {
-                const target = procurementList.find(item => String(item.id) === String(caseId));
-                if (!target) return;
+            const allowedScopes = getAuthorizedScopeList();
 
-                modalTitle.innerHTML = '<span>✏️</span> 修改深耕計畫採購案';
+            if (id) {
+                const target = procurementList.find(item => item.id === id);
+                if (!target) return;
+                populateAuthorizedScopeSelect(target.scope);
+                title.innerHTML = '<span>✏️</span> 修改採購案件資料';
                 document.getElementById('caseId').value = target.id;
-                document.getElementById('fieldScope').value = target.scope || '';
-                updateSubProjectOptions(target.subProject || '');
-                document.getElementById('fieldItem').value = target.item || '';
-                document.getElementById('fieldBudget').value = target.budget || '150萬以下';
-                document.getElementById('fieldSerial').value = target.serial || '';
-                document.getElementById('fieldStatus').value = target.status || '未採購';
-                document.getElementById('fieldApplicant').value = target.applicant || '';
-                document.getElementById('fieldNotes').value = target.notes || '';
+                document.getElementById('fieldScope').value = target.scope;
+                updateSubProjectOptions(target.subProject);
+                document.getElementById('fieldItem').value = target.item;
+                document.getElementById('fieldBudget').value = target.budget;
+                document.getElementById('fieldSerial').value = target.serial;
+                document.getElementById('fieldStatus').value = target.status;
+                document.getElementById('fieldApplicant').value = target.applicant;
+                document.getElementById('fieldNotes').value = target.notes;
             } else {
-                modalTitle.innerHTML = '<span>✨</span> 新增深耕計畫採購案';
+                populateAuthorizedScopeSelect();
+                title.innerHTML = '<span>✨</span> 新增深耕計畫採購案';
                 document.getElementById('caseId').value = '';
-                document.getElementById('fieldScope').value = '';
-                updateSubProjectOptions('');
                 document.getElementById('fieldBudget').value = '150萬以下';
                 document.getElementById('fieldStatus').value = '未採購';
+                if (allowedScopes.length === 1) {
+                    document.getElementById('fieldScope').value = allowedScopes[0];
+                    updateSubProjectOptions('');
+                } else {
+                    document.getElementById('fieldScope').value = '';
+                    updateSubProjectOptions('');
+                }
             }
 
             modal.classList.remove('hidden');
@@ -1725,15 +1767,125 @@
             document.getElementById('caseModal').classList.add('hidden');
         }
 
-        // ==================== Excel 匯入功能 ====================
-        let parsedExcelRows = [];
+        function saveCase(event) {
+            event.preventDefault();
 
-        function openExcelModal() {
-            if (currentRole !== 'admin') {
-                showToast('⛔ 權限不足：僅「管理者」可使用 Excel 批次匯入！');
+            const id = document.getElementById('caseId').value;
+            const caseData = {
+                id: id ? id : Date.now().toString(),
+                scope: document.getElementById('fieldScope').value.trim(),
+                subProject: document.getElementById('fieldSubProject').value.trim(),
+                item: document.getElementById('fieldItem').value.trim(),
+                budget: document.getElementById('fieldBudget').value,
+                serial: document.getElementById('fieldSerial').value.trim(),
+                status: document.getElementById('fieldStatus').value,
+                applicant: document.getElementById('fieldApplicant').value.trim(),
+                notes: document.getElementById('fieldNotes').value.trim()
+            };
+
+            if (id) {
+                const index = procurementList.findIndex(item => item.id === id);
+                if (index !== -1) {
+                    procurementList[index] = caseData;
+                    showToast('採購案件已成功更新並同步至雲端！', '✅');
+                }
+            } else {
+                procurementList.unshift(caseData);
+                showToast('新採購案件已成功建立並寫入試算表！', '🎉');
+            }
+
+            saveToStorage();
+            updateDashboard();
+            filterData();
+            closeModal();
+
+            sendToGoogleSheet({ action: 'upsert', data: caseData });
+        }
+
+        function openDeleteModal(id) {
+            if (currentUserRole !== 'admin') {
+                showToast('權限不足：僅管理者可刪除採購案件！', '⛔');
                 return;
             }
-            parsedExcelRows = [];
+            const target = procurementList.find(item => item.id === id);
+            if (!target) return;
+            deleteTargetId = id;
+            document.getElementById('deleteTargetName').textContent = `「${target.item}」(${target.serial})`;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            deleteTargetId = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        function confirmDelete() {
+            if (currentUserRole !== 'admin') {
+                showToast('權限不足：僅管理者可刪除採購案件！', '⛔');
+                closeDeleteModal();
+                return;
+            }
+            if (!deleteTargetId) return;
+            const deletedId = deleteTargetId;
+            procurementList = procurementList.filter(item => item.id !== deletedId);
+            saveToStorage();
+            updateDashboard();
+            filterData();
+            closeDeleteModal();
+            showToast('該筆採購案件已刪除並同步更新試算表！', '🗑️');
+
+            sendToGoogleSheet({ action: 'delete', id: deletedId });
+        }
+
+        function exportToExcel() {
+            const dataToExport = currentFilteredList.length > 0 ? currentFilteredList : getAuthorizedProcurementList();
+
+            if (!dataToExport || dataToExport.length === 0) {
+                showToast('目前沒有可匯出的採購資料！', '⚠️');
+                return;
+            }
+
+            const exportRows = dataToExport.map(item => ({
+                '範疇': item.scope || '',
+                '子計畫': item.subProject || '',
+                '採購項目': item.item || '',
+                '採購金額': item.budget || '150萬以下',
+                '財添單序號': item.serial || '',
+                '目前狀態': item.status || '未採購',
+                '申請人': item.applicant || '',
+                '調查記錄說明': item.notes || ''
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportRows);
+            ws['!cols'] = [
+                { wch: 12 },
+                { wch: 18 },
+                { wch: 36 },
+                { wch: 14 },
+                { wch: 18 },
+                { wch: 12 },
+                { wch: 14 },
+                { wch: 42 }
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '採購明細');
+
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+            const isFiltered = dataToExport.length < getAuthorizedProcurementList().length;
+            const fileName = `深耕計畫採購明細${isFiltered ? '_篩選結果' : ''}_${dateStr}.xlsx`;
+
+            XLSX.writeFile(wb, fileName);
+            showToast(`已成功匯出 ${dataToExport.length} 筆採購明細至 Excel！`, '📤');
+        }
+
+        function openExcelModal() {
+            if (currentUserRole !== 'admin') {
+                showToast('權限不足：僅管理者可使用 Excel 批次匯入！', '⛔');
+                return;
+            }
+            pendingExcelRows = [];
             document.getElementById('excelFileInput').value = '';
             document.getElementById('excelFileName').textContent = '尚未選擇檔案';
             document.getElementById('excelPreviewBox').classList.add('hidden');
@@ -1746,140 +1898,139 @@
         }
 
         function downloadExcelTemplate() {
-            const sampleRows = [
+            const templateData = [
                 {
                     '範疇': '範疇一',
                     '子計畫': '手術室',
-                    '採購項目': '高解析度內視鏡影像系統',
+                    '採購項目': '高解析度教學顯微鏡組',
                     '採購金額': '150萬以上',
-                    '財添單序號': '115-P01-0201',
-                    '目前狀態': '未採購',
-                    '申請人': '王大明 醫師',
-                    '調查記錄說明': '待確認規格書與預算編列'
+                    '財添單序號': '115-P01-0999',
+                    '目前狀態': '已送單',
+                    '申請人': '王大明 教授',
+                    '調查記錄說明': '已完成規格審查，送交採購組辦理公開招標。'
                 },
                 {
                     '範疇': '範疇二',
                     '子計畫': '教學部',
-                    '採購項目': '數位病理教學切片組',
+                    '採購項目': '互動式電子白板與視訊設備',
                     '採購金額': '150萬以下',
-                    '財添單序號': '115-P02-0202',
-                    '目前狀態': '已送單',
+                    '財添單序號': '115-P02-0888',
+                    '目前狀態': '詢價中',
                     '申請人': '陳小華 老師',
-                    '調查記錄說明': '已送出財添單至採購組'
+                    '調查記錄說明': '已取得兩家廠商報價單，等待第三家報價。'
                 }
             ];
-            const worksheet = XLSX.utils.json_to_sheet(sampleRows);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, '採購匯入範本');
-            XLSX.writeFile(workbook, '深耕計畫採購案_匯入範本.xlsx');
+            const ws = XLSX.utils.json_to_sheet(templateData);
+            ws['!cols'] = [{ wch: 14 }, { wch: 18 }, { wch: 32 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 36 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '採購明細');
+            XLSX.writeFile(wb, '深耕計畫採購案匯入範本.xlsx');
+            showToast('已下載標準 Excel 範本檔案！', '⬇️');
         }
 
         function handleExcelFile(event) {
-            const file = event.target.files && event.target.files[0];
+            const file = event.target.files[0];
             if (!file) return;
 
-            document.getElementById('excelFileName').textContent = `📄 ${file.name}`;
+            document.getElementById('excelFileName').textContent = `已選擇：${file.name}`;
             const reader = new FileReader();
 
-            reader.onload = function (e) {
+            reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const targetSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[targetSheetName];
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
                     const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-                    parsedExcelRows = rawRows
-                        .filter(r => String(r['採購項目'] || '').trim() !== '' || String(r['財添單序號'] || '').trim() !== '')
-                        .map((r, idx) => {
-                            const rawBudget = String(r['採購金額'] || '').trim();
-                            const budgetVal = rawBudget.includes('150萬以上') || rawBudget.includes('以上') ? '150萬以上' : '150萬以下';
-                            const rawStatus = String(r['目前狀態'] || r['狀態'] || '未採購').trim();
-                            const statusVal = ALL_STATUSES.includes(rawStatus) ? rawStatus : '未採購';
+                    pendingExcelRows = rawRows
+                        .filter(row => (row['採購項目'] || row['範疇'] || row['財添單序號']))
+                        .map((row, idx) => {
+                            const rawBudget = String(row['採購金額'] || '').trim();
+                            const budget = rawBudget.includes('以上') ? '150萬以上' : '150萬以下';
+
+                            const rawStatus = String(row['目前狀態'] || row['狀態'] || '未採購').trim();
+                            const validStatus = STATUS_CONFIG[rawStatus] ? rawStatus : '未採購';
 
                             return {
-                                id: r['案件ID'] ? String(r['案件ID']).trim() : `${Date.now()}_${idx}`,
-                                scope: String(r['範疇'] || '範疇一').trim(),
-                                subProject: String(r['子計畫'] || '').trim(),
-                                item: String(r['採購項目'] || '未命名採購項目').trim(),
-                                budget: budgetVal,
-                                serial: String(r['財添單序號'] || '待補序號').trim(),
-                                status: statusVal,
-                                applicant: String(r['申請人'] || '未填寫').trim(),
-                                notes: String(r['調查記錄說明'] || '').trim(),
-                                editor: currentAccountLabel || currentUsername || ''
+                                id: String(Date.now() + idx),
+                                scope: String(row['範疇'] || '').trim(),
+                                subProject: String(row['子計畫'] || '').trim(),
+                                item: String(row['採購項目'] || '').trim(),
+                                budget: budget,
+                                serial: String(row['財添單序號'] || '').trim(),
+                                status: validStatus,
+                                applicant: String(row['申請人'] || '').trim(),
+                                notes: String(row['調查記錄說明'] || row['備註'] || '').trim()
                             };
                         });
 
                     const previewBox = document.getElementById('excelPreviewBox');
                     const previewSummary = document.getElementById('excelPreviewSummary');
-                    const importBtn = document.getElementById('confirmImportBtn');
+                    const confirmBtn = document.getElementById('confirmImportBtn');
 
-                    if (parsedExcelRows.length > 0) {
-                        previewBox.classList.remove('hidden');
-                        previewSummary.textContent = `✅ 成功從工作表「${targetSheetName}」解析出 ${parsedExcelRows.length} 筆有效採購資料，點擊下方按鈕即可匯入並同步至 Google Sheets！`;
-                        importBtn.disabled = false;
+                    previewBox.classList.remove('hidden');
+                    if (pendingExcelRows.length > 0) {
+                        previewSummary.innerHTML = `✅ 成功解析 <span class="text-emerald-700 underline">${pendingExcelRows.length}</span> 筆有效採購資料！點擊下方按鈕即可匯入並同步至 Google Sheets。`;
+                        confirmBtn.disabled = false;
                     } else {
-                        previewBox.classList.remove('hidden');
-                        previewSummary.textContent = `⚠️ 找不到有效的採購資料，請確認 Excel 第一列包含正確的欄位標題（範疇、子計畫、採購項目等）。`;
-                        importBtn.disabled = true;
+                        previewSummary.innerHTML = `⚠️ 檔案中找不到有效的採購資料，請確認標題列包含「範疇、子計畫、採購項目」等欄位。`;
+                        confirmBtn.disabled = true;
                     }
                 } catch (err) {
-                    console.error('Excel 解析錯誤:', err);
-                    showToast('❌ Excel 檔案解析失敗，請確認檔案格式是否正確');
+                    console.error('Excel 解析失敗:', err);
+                    showToast('Excel 檔案解析失敗，請確認檔案格式是否正確！', '⚠️');
                 }
             };
+
             reader.readAsArrayBuffer(file);
         }
 
-        // 確認匯入並同步至 Google Sheets
-        async function confirmExcelImport() {
-            if (parsedExcelRows.length === 0) return;
+        function confirmExcelImport() {
+            if (currentUserRole !== 'admin') {
+                showToast('權限不足：僅管理者可執行 Excel 匯入！', '⛔');
+                return;
+            }
+            if (pendingExcelRows.length === 0) return;
 
             const mode = document.querySelector('input[name="importMode"]:checked').value;
             if (mode === 'replace') {
-                procurementList = [...parsedExcelRows];
+                procurementList = [...pendingExcelRows];
             } else {
-                procurementList = [...parsedExcelRows, ...procurementList];
+                procurementList = [...pendingExcelRows, ...procurementList];
             }
 
             saveToStorage();
-            renderAll();
+            updateDashboard();
+            filterData();
             closeExcelModal();
 
-            showToast(`⏳ 正在將 ${parsedExcelRows.length} 筆 Excel 資料同步至 Google Sheets...`);
-            await sendToGoogleSheet({ action: 'syncAll', data: procurementList });
-            setTimeout(() => {
-                showToast(`🎉 成功匯入 ${parsedExcelRows.length} 筆資料並同步至「採購明細」！`);
-            }, 800);
+            sendToGoogleSheet({ action: 'syncAll', data: procurementList });
+            showToast(`成功匯入 ${pendingExcelRows.length} 筆資料並同步至 Google Sheets！`, '🎉');
         }
 
-        // 提示訊息與 XSS 安全跳脫工具
-        let toastTimer = null;
-        function showToast(message, icon = '✨') {
+        function showToast(message, icon = '🎉') {
             const toast = document.getElementById('toast');
-            const toastIcon = document.getElementById('toastIcon');
-            const toastMsg = document.getElementById('toastMsg');
-            toastIcon.textContent = icon;
-            toastMsg.textContent = message;
+            document.getElementById('toastMsg').textContent = message;
+            document.getElementById('toastIcon').textContent = icon;
 
             toast.classList.remove('translate-y-20', 'opacity-0');
             toast.classList.add('translate-y-0', 'opacity-100');
 
-            if (toastTimer) clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => {
+            setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('translate-y-20', 'opacity-0');
             }, 3000);
         }
 
-        function escapeHtml(str) {
-            return String(str ?? '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
     </script>
 </body>
