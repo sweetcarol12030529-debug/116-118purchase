@@ -161,6 +161,9 @@
                 <button onclick="exportToExcel()" class="w-full sm:w-auto bg-sky-600/90 hover:bg-sky-700 text-white border border-sky-300/50 font-bold px-4 py-2.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm" title="將目前顯示的採購明細匯出為 Excel 檔案">
                     <span class="text-base">📤</span> 匯出 Excel
                 </button>
+                <button onclick="openAuditLogModal()" class="w-full sm:w-auto bg-indigo-600/90 hover:bg-indigo-700 text-white border border-indigo-300/50 font-bold px-4 py-2.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm" title="查詢採購案件新增、修改、刪除與匯入歷程">
+                    <span class="text-base">📜</span> 修改紀錄
+                </button>
                 <button id="btnUserManage" onclick="openUserManageModal()" class="hidden w-full sm:w-auto bg-amber-500/95 hover:bg-amber-600 text-slate-900 border border-amber-200 font-extrabold px-4 py-2.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-sm">
                     <span class="text-base">👥</span> 使用者管理
                 </button>
@@ -720,6 +723,76 @@
         </div>
     </div>
 
+    <!-- 修改紀錄查詢視窗 -->
+    <div id="auditLogModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-emerald-950/60 backdrop-blur-sm transition-opacity" onclick="closeAuditLogModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all max-w-4xl w-full border-2 border-indigo-200">
+                <!-- 標題列 -->
+                <div class="bg-gradient-to-r from-indigo-600 to-teal-600 px-6 py-4 text-white flex justify-between items-center">
+                    <h3 class="text-lg font-black flex items-center gap-2">
+                        <span>📜</span> 採購案件修改紀錄查詢
+                    </h3>
+                    <button onclick="closeAuditLogModal()" class="text-white/80 hover:text-white bg-white/15 hover:bg-white/25 rounded-xl p-1.5 cursor-pointer font-bold">✖️</button>
+                </div>
+
+                <div class="p-6 space-y-4 bg-gradient-to-b from-indigo-50/30 to-white">
+                    <!-- 篩選控制列 -->
+                    <div class="flex flex-col sm:flex-row gap-3 justify-between items-center">
+                        <div class="relative w-full sm:w-80">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-sm">🔎</span>
+                            <input type="text" id="auditSearchInput" oninput="renderAuditLogs()" placeholder="搜尋項目、序號、執行者或變更內容..."
+                                class="w-full pl-9 pr-3 py-2 rounded-xl border border-indigo-200 focus:ring-2 focus:ring-indigo-400 focus:outline-none text-xs bg-white font-medium">
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                            <select id="auditActionFilter" onchange="renderAuditLogs()"
+                                class="px-3 py-2 rounded-xl border border-indigo-200 focus:ring-2 focus:ring-indigo-400 focus:outline-none text-xs font-bold text-slate-700 bg-white cursor-pointer">
+                                <option value="ALL">全部操作類型</option>
+                                <option value="新增">✨ 新增</option>
+                                <option value="修改">✏️ 修改</option>
+                                <option value="刪除">🗑️ 刪除</option>
+                                <option value="批次匯入">📥 批次匯入</option>
+                            </select>
+                            <span id="auditLogCount" class="text-xs font-extrabold text-indigo-800 bg-indigo-100 px-3 py-1.5 rounded-full">
+                                共 0 筆紀錄
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 紀錄列表 -->
+                    <div class="border border-indigo-100 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                        <div class="max-h-96 overflow-y-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-indigo-50/90 text-indigo-950 font-extrabold border-b border-indigo-100 sticky top-0">
+                                        <th class="py-3 px-3 whitespace-nowrap">🕒 操作時間</th>
+                                        <th class="py-3 px-3 whitespace-nowrap">👤 執行者</th>
+                                        <th class="py-3 px-3 whitespace-nowrap">🏷️ 動作</th>
+                                        <th class="py-3 px-3 whitespace-nowrap">🎯 範疇 / 序號</th>
+                                        <th class="py-3 px-3 min-w-[240px]">📝 變更明細</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditLogTableBody" class="divide-y divide-slate-100">
+                                    <!-- 由 JS 動態渲染 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="auditLogEmpty" class="hidden py-10 text-center text-slate-400 text-xs font-bold">
+                        📭 目前沒有符合條件的修改紀錄
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="button" onclick="closeAuditLogModal()" class="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer">
+                            關閉視窗
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 漂浮提示訊息 (Toast) -->
     <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
         <div class="bg-emerald-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 border border-emerald-500/40">
@@ -857,7 +930,7 @@
         let currentAccountLabel = null;
         let currentUserScopes = ['ALL'];
         let pendingExcelRows = [];
-
+        let auditLogs = [];
         function loadUserAccounts() {
             const saved = localStorage.getItem('deepCultivationUsers_v2');
             if (saved) {
@@ -1198,6 +1271,145 @@
             }
             const savedTime = localStorage.getItem('deepCultivationLastUpdated');
             setLastUpdated(savedTime || formatDateTime(new Date()));
+            loadAuditLogs();
+        }
+
+        function formatFullTimestamp(date = new Date()) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            const hh = String(date.getHours()).padStart(2, '0');
+            const mm = String(date.getMinutes()).padStart(2, '0');
+            const ss = String(date.getSeconds()).padStart(2, '0');
+            return `${y}/${m}/${d} ${hh}:${mm}:${ss}`;
+        }
+
+        function loadAuditLogs() {
+            const savedLogs = localStorage.getItem('deepCultivationAuditLogs_v1');
+            if (savedLogs) {
+                try {
+                    auditLogs = JSON.parse(savedLogs);
+                    if (!Array.isArray(auditLogs)) auditLogs = [];
+                } catch (e) {
+                    auditLogs = [];
+                }
+            } else {
+                auditLogs = [];
+            }
+        }
+
+        function appendAuditLog(actionType, targetItem, detailSummary) {
+            const entry = {
+                id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                timestamp: formatFullTimestamp(new Date()),
+                editor: currentAccountLabel || currentAccountName || '未知使用者',
+                action: actionType,
+                scope: targetItem?.scope || '全部範疇',
+                subProject: targetItem?.subProject || '',
+                serial: targetItem?.serial || '',
+                itemName: targetItem?.item || '',
+                detail: detailSummary || ''
+            };
+            auditLogs.unshift(entry);
+            if (auditLogs.length > 300) {
+                auditLogs = auditLogs.slice(0, 300);
+            }
+            localStorage.setItem('deepCultivationAuditLogs_v1', JSON.stringify(auditLogs));
+            if (document.getElementById('auditLogModal') && !document.getElementById('auditLogModal').classList.contains('hidden')) {
+                renderAuditLogs();
+            }
+            return entry;
+        }
+
+        function describeCaseDiff(oldItem, newItem) {
+            const changes = [];
+            if (oldItem.scope !== newItem.scope) changes.push(`範疇：「${oldItem.scope || '無'}」→「${newItem.scope || '無'}」`);
+            if (oldItem.subProject !== newItem.subProject) changes.push(`子計畫：「${oldItem.subProject || '無'}」→「${newItem.subProject || '無'}」`);
+            if (oldItem.item !== newItem.item) changes.push(`項目：「${oldItem.item || '無'}」→「${newItem.item || '無'}」`);
+            if (oldItem.budget !== newItem.budget) changes.push(`金額：「${oldItem.budget}」→「${newItem.budget}」`);
+            if (oldItem.serial !== newItem.serial) changes.push(`序號：「${oldItem.serial || '無'}」→「${newItem.serial || '無'}」`);
+            if (oldItem.status !== newItem.status) changes.push(`狀態：「${oldItem.status}」→「${newItem.status}」`);
+            if (oldItem.applicant !== newItem.applicant) changes.push(`申請人：「${oldItem.applicant || '無'}」→「${newItem.applicant || '無'}」`);
+            if ((oldItem.notes || '') !== (newItem.notes || '')) changes.push(`調查說明已更新`);
+
+            if (changes.length === 0) {
+                return `更新案件「${newItem.item}」（內容無欄位差異）`;
+            }
+            return `【${newItem.item}】${changes.join('；')}`;
+        }
+
+        function openAuditLogModal() {
+            document.getElementById('auditSearchInput').value = '';
+            document.getElementById('auditActionFilter').value = 'ALL';
+            renderAuditLogs();
+            document.getElementById('auditLogModal').classList.remove('hidden');
+        }
+
+        function closeAuditLogModal() {
+            document.getElementById('auditLogModal').classList.add('hidden');
+        }
+
+        function renderAuditLogs() {
+            const tbody = document.getElementById('auditLogTableBody');
+            const emptyBox = document.getElementById('auditLogEmpty');
+            const countBadge = document.getElementById('auditLogCount');
+            const keyword = (document.getElementById('auditSearchInput')?.value || '').toLowerCase().trim();
+            const actionFilter = document.getElementById('auditActionFilter')?.value || 'ALL';
+
+            const scopedLogs = isAllScopesAllowed()
+                ? auditLogs
+                : auditLogs.filter(log => !log.scope || log.scope === '全部範疇' || currentUserScopes.includes(log.scope));
+
+            const filtered = scopedLogs.filter(log => {
+                const matchAction = actionFilter === 'ALL' || log.action === actionFilter;
+                const matchKeyword = !keyword ||
+                    (log.editor || '').toLowerCase().includes(keyword) ||
+                    (log.action || '').toLowerCase().includes(keyword) ||
+                    (log.scope || '').toLowerCase().includes(keyword) ||
+                    (log.subProject || '').toLowerCase().includes(keyword) ||
+                    (log.serial || '').toLowerCase().includes(keyword) ||
+                    (log.itemName || '').toLowerCase().includes(keyword) ||
+                    (log.detail || '').toLowerCase().includes(keyword);
+                return matchAction && matchKeyword;
+            });
+
+            countBadge.textContent = `共 ${filtered.length} 筆紀錄`;
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyBox.classList.remove('hidden');
+                return;
+            }
+            emptyBox.classList.add('hidden');
+
+            const actionStyles = {
+                '新增': { emoji: '✨', cls: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+                '修改': { emoji: '✏️', cls: 'bg-sky-100 text-sky-800 border-sky-300' },
+                '刪除': { emoji: '🗑️', cls: 'bg-rose-100 text-rose-800 border-rose-300' },
+                '批次匯入': { emoji: '📥', cls: 'bg-amber-100 text-amber-800 border-amber-300' }
+            };
+
+            filtered.forEach(log => {
+                const style = actionStyles[log.action] || { emoji: '📝', cls: 'bg-slate-100 text-slate-700 border-slate-300' };
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-indigo-50/40 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-3 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">${escapeHtml(log.timestamp)}</td>
+                    <td class="py-3 px-3 font-bold text-slate-800 whitespace-nowrap">${escapeHtml(log.editor)}</td>
+                    <td class="py-3 px-3 whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${style.cls}">
+                            <span>${style.emoji}</span>
+                            <span>${escapeHtml(log.action)}</span>
+                        </span>
+                    </td>
+                    <td class="py-3 px-3 whitespace-nowrap">
+                        <div class="font-bold text-emerald-900">${escapeHtml(log.scope || '')}${log.subProject ? ` / ${escapeHtml(log.subProject)}` : ''}</div>
+                        <div class="font-mono text-[11px] text-slate-500">${escapeHtml(log.serial || '-')}</div>
+                    </td>
+                    <td class="py-3 px-3 text-slate-700 leading-relaxed">${escapeHtml(log.detail)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
         function saveToStorage(updateTime = true) {
@@ -1226,6 +1438,10 @@
                         applicant: item.applicant || '',
                         notes: item.notes || ''
                     }));
+                    if (Array.isArray(result.auditLogs)) {
+                        auditLogs = result.auditLogs.slice(0, 300);
+                        localStorage.setItem('deepCultivationAuditLogs_v1', JSON.stringify(auditLogs));
+                    }
                     saveToStorage(true);
                     updateDashboard();
                     filterData();
@@ -1247,12 +1463,20 @@
             if (!gasWebAppUrl) return;
             try {
                 payload.editor = currentAccountLabel || currentAccountName || '未知使用者';
-                await fetch(gasWebAppUrl, {
+                if (payload.auditLog) {
+                    payload.auditLog.editor = payload.editor;
+                }
+                const response = await fetch(gasWebAppUrl, {
                     method: 'POST',
-                    mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
+                if (response && response.ok) {
+                    const result = await response.json().catch(() => null);
+                    if (result && result.status === 'error') {
+                        console.error('Google Sheets 寫入回報錯誤:', result.message);
+                    }
+                }
             } catch (error) {
                 console.error('Google Sheets 同步失敗:', error);
                 showToast('雲端同步異常，請檢查網路或網址設定', '⚠️');
@@ -1783,14 +2007,22 @@
                 notes: document.getElementById('fieldNotes').value.trim()
             };
 
+            let auditEntry = null;
             if (id) {
                 const index = procurementList.findIndex(item => item.id === id);
                 if (index !== -1) {
+                    const prevItem = { ...procurementList[index] };
                     procurementList[index] = caseData;
+                    auditEntry = appendAuditLog('修改', caseData, describeCaseDiff(prevItem, caseData));
                     showToast('採購案件已成功更新並同步至雲端！', '✅');
                 }
             } else {
                 procurementList.unshift(caseData);
+                auditEntry = appendAuditLog(
+                    '新增',
+                    caseData,
+                    `新增案件「${caseData.item}」（${caseData.scope} / ${caseData.subProject}，${caseData.budget}，狀態：${caseData.status}）`
+                );
                 showToast('新採購案件已成功建立並寫入試算表！', '🎉');
             }
 
@@ -1799,7 +2031,7 @@
             filterData();
             closeModal();
 
-            sendToGoogleSheet({ action: 'upsert', data: caseData });
+            sendToGoogleSheet({ action: 'upsert', data: caseData, auditLog: auditEntry });
         }
 
         function openDeleteModal(id) {
@@ -1827,14 +2059,23 @@
             }
             if (!deleteTargetId) return;
             const deletedId = deleteTargetId;
+            const deletedItem = procurementList.find(item => item.id === deletedId);
             procurementList = procurementList.filter(item => item.id !== deletedId);
+            let auditEntry = null;
+            if (deletedItem) {
+                auditEntry = appendAuditLog(
+                    '刪除',
+                    deletedItem,
+                    `刪除案件「${deletedItem.item}」（財添單序號：${deletedItem.serial || '無'}，${deletedItem.scope} / ${deletedItem.subProject}）`
+                );
+            }
             saveToStorage();
             updateDashboard();
             filterData();
             closeDeleteModal();
             showToast('該筆採購案件已刪除並同步更新試算表！', '🗑️');
 
-            sendToGoogleSheet({ action: 'delete', id: deletedId });
+            sendToGoogleSheet({ action: 'delete', id: deletedId, auditLog: auditEntry });
         }
 
         function exportToExcel() {
@@ -2000,12 +2241,23 @@
                 procurementList = [...pendingExcelRows, ...procurementList];
             }
 
+            const auditEntry = appendAuditLog(
+                '批次匯入',
+                {
+                    scope: pendingExcelRows.length === 1 ? pendingExcelRows[0].scope : '全部範疇',
+                    subProject: pendingExcelRows.length === 1 ? pendingExcelRows[0].subProject : '',
+                    serial: pendingExcelRows.length === 1 ? pendingExcelRows[0].serial : `${pendingExcelRows.length} 筆`,
+                    item: pendingExcelRows[0]?.item || ''
+                },
+                `以「${mode === 'replace' ? '覆蓋取代全部資料' : '附加新增至現有資料'}」模式匯入 ${pendingExcelRows.length} 筆採購案件`
+            );
+
             saveToStorage();
             updateDashboard();
             filterData();
             closeExcelModal();
 
-            sendToGoogleSheet({ action: 'syncAll', data: procurementList });
+            sendToGoogleSheet({ action: 'syncAll', data: procurementList, auditLog: auditEntry });
             showToast(`成功匯入 ${pendingExcelRows.length} 筆資料並同步至 Google Sheets！`, '🎉');
         }
 
