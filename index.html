@@ -920,7 +920,7 @@
         ];
 
         // 全域狀態變數
-        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzI6jNhpGRzHZNt8rfXaTp937xdOvG9jCY8RBurzQbe7EVcvnsbXrBAvyW5VNUUeNuI/exec';
+        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzFhnTmAJrWJmKgvf3-9THs63dmhWNVYOgIuMo-1f9JCQCRuO3Ut_yx0R0Mz_f5cf1CHw/exec';
         let gasWebAppUrl = DEFAULT_GAS_URL;
         let procurementList = [];
         let currentFilteredList = [];
@@ -1491,6 +1491,11 @@
                     const result = await response.json().catch(() => null);
                     if (result && result.status === 'error') {
                         console.error('Google Sheets 寫入回報錯誤:', result.message);
+                        if (String(result.message).includes('permission') || String(result.message).includes('權限')) {
+                            showToast('試算表無寫入權限！請確認部署帳號具備新試算表的「編輯者」權限並重新授權', '⛔');
+                        } else {
+                            showToast(`試算表寫入失敗：${result.message}`, '⚠️');
+                        }
                     }
                 }
             } catch (error) {
