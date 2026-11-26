@@ -436,11 +436,6 @@
                             <label class="block text-xs font-extrabold text-emerald-900 mb-1">🎯 範疇 <span class="text-rose-500">*</span></label>
                             <select id="fieldScope" required onchange="updateSubProjectOptions()"
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-medium">
-                                <option value="" disabled selected>請選擇範疇</option>
-                                <option value="範疇一">範疇一</option>
-                                <option value="範疇二">範疇二</option>
-                                <option value="範疇三">範疇三</option>
-                                <option value="範疇四">範疇四</option>
                             </select>
                         </div>
 
@@ -449,7 +444,6 @@
                             <label class="block text-xs font-extrabold text-emerald-900 mb-1">🌿 子計畫 <span class="text-rose-500">*</span></label>
                             <select id="fieldSubProject" required
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-medium">
-                                <option value="" disabled selected>請先選擇範疇</option>
                             </select>
                         </div>
                     </div>
@@ -465,14 +459,15 @@
                         <!-- 採購金額級距 -->
                         <div>
                             <label class="block text-xs font-extrabold text-emerald-900 mb-1">💰 採購金額 <span class="text-rose-500">*</span></label>
-                            <select id="fieldBudget" required class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-bold">
+                            <select id="fieldBudget" required
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-medium">
                                 <option value="150萬以下">💵 150萬以下</option>
                                 <option value="150萬以上">💎 150萬以上</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <!-- 財添單序號 -->
                         <div>
                             <label class="block text-xs font-extrabold text-emerald-900 mb-1">🔢 財添單序號 <span class="text-rose-500">*</span></label>
@@ -480,10 +475,19 @@
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-mono">
                         </div>
 
+                        <!-- 申請人 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">👤 申請人 <span class="text-rose-500">*</span></label>
+                            <input type="text" id="fieldApplicant" required placeholder="例如：林小明 老師"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <!-- 狀態 -->
                         <div>
                             <label class="block text-xs font-extrabold text-emerald-900 mb-1">🚦 目前狀態 <span class="text-rose-500">*</span></label>
-                            <select id="fieldStatus" required class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-medium">
+                            <select id="fieldStatus" required onchange="updateStatusOwnerRequirement()" class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white font-medium">
                                 <option value="未採購">⏳ 未採購</option>
                                 <option value="已送單">📨 已送單</option>
                                 <option value="詢價中">🔍 詢價中</option>
@@ -495,10 +499,13 @@
                             </select>
                         </div>
 
-                        <!-- 申請人 -->
+                        <!-- 狀態流程負責人（未採購、結案時免必填） -->
                         <div>
-                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">👤 申請人 <span class="text-rose-500">*</span></label>
-                            <input type="text" id="fieldApplicant" required placeholder="例如：林小明 老師"
+                            <label class="block text-xs font-extrabold text-emerald-900 mb-1">
+                                🧑‍💼 狀態流程負責人 <span id="statusOwnerRequiredMark" class="text-rose-500">*</span>
+                                <span id="statusOwnerHint" class="text-[11px] font-normal text-slate-400 ml-1">(進行中狀態必填)</span>
+                            </label>
+                            <input type="text" id="fieldStatusOwner" placeholder="例如：採購組-王專員"
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-400 focus:outline-none text-sm bg-white">
                         </div>
                     </div>
@@ -567,7 +574,7 @@
                             </button>
                         </div>
                         <p class="text-xs text-slate-600 leading-relaxed">
-                            第一列標題請包含：<span class="font-bold text-emerald-800">範疇、子計畫、採購項目、採購金額、財添單序號、目前狀態、申請人、調查記錄說明</span>（相容系統匯出的試算表格式）。
+                            第一列標題請包含：<span class="font-bold text-emerald-800">範疇、子計畫、採購項目、採購金額、財添單序號、目前狀態、狀態流程負責人、申請人、調查記錄說明</span>（相容系統匯出的試算表格式）。
                         </p>
                     </div>
 
@@ -834,6 +841,7 @@
                 item: '高效能GPU深度學習運算伺服器集群',
                 serial: '115-P01-0012',
                 status: '議價中',
+                statusOwner: '採購組-李專員',
                 applicant: '陳建宏 教授',
                 notes: '已完成三家廠商規格審查與公開閱覽，預計本週五進行底價核定與議價程序。'
             },
@@ -845,6 +853,7 @@
                 item: '可攜式雷射雕刻機與3D列印教學套組',
                 serial: '115-P02-0045',
                 status: '已驗收',
+                statusOwner: '保管組-周小姐',
                 applicant: '林雅婷 助理教授',
                 notes: '設備已送達創客基地並完成功能測試點交，財產標籤已黏貼完畢，準備送核銷。'
             },
@@ -856,6 +865,7 @@
                 item: '高精度材料疲勞測試儀',
                 serial: '115-P03-0008',
                 status: '產生訂單',
+                statusOwner: '採購組-張組長',
                 applicant: '王志明 主任',
                 notes: '德國原廠進口設備，已開立信用狀並產生正式採購訂單，預計交期為60個工作天。'
             },
@@ -867,6 +877,7 @@
                 item: '輕薄型教學借用筆記型電腦 (30台)',
                 serial: '115-P04-0091',
                 status: '結案',
+                statusOwner: '',
                 applicant: '張美玲 專員',
                 notes: '已完成驗收、核銷撥款及財產登錄，全案順利結案！'
             },
@@ -878,6 +889,7 @@
                 item: '4K廣播級攝影機與虛擬棚燈光音響設備',
                 serial: '115-P01-0103',
                 status: '詢價中',
+                statusOwner: '採購組-陳先生',
                 applicant: '李俊傑 老師',
                 notes: '已請購送出，採購組正針對三家報價單進行規格與保固年限比價確認。'
             },
@@ -889,6 +901,7 @@
                 item: '多光譜無人機遙測系統',
                 serial: '115-P05-0027',
                 status: '己核銷',
+                statusOwner: '財務室-劉專員',
                 applicant: '黃淑芬 研究員',
                 notes: '憑證已送會計室審核通過，等待出納組匯款給廠商即可正式結案。'
             },
@@ -900,6 +913,7 @@
                 item: '一體式VR頭戴顯示器及生理回饋感測器',
                 serial: '115-P01-0118',
                 status: '已送單',
+                statusOwner: '總務處-吳小姐',
                 applicant: '吳佩珊 講師',
                 notes: '財添單已由系辦核章送出至總務處採購組收件。'
             }
@@ -1329,6 +1343,7 @@
             if (oldItem.budget !== newItem.budget) changes.push(`金額：「${oldItem.budget}」→「${newItem.budget}」`);
             if (oldItem.serial !== newItem.serial) changes.push(`序號：「${oldItem.serial || '無'}」→「${newItem.serial || '無'}」`);
             if (oldItem.status !== newItem.status) changes.push(`狀態：「${oldItem.status}」→「${newItem.status}」`);
+            if ((oldItem.statusOwner || '') !== (newItem.statusOwner || '')) changes.push(`流程負責人：「${oldItem.statusOwner || '無'}」→「${newItem.statusOwner || '無'}」`);
             if (oldItem.applicant !== newItem.applicant) changes.push(`申請人：「${oldItem.applicant || '無'}」→「${newItem.applicant || '無'}」`);
             if ((oldItem.notes || '') !== (newItem.notes || '')) changes.push(`調查說明已更新`);
 
@@ -1435,6 +1450,7 @@
                         budget: item.budget === '150萬以上' ? '150萬以上' : '150萬以下',
                         serial: item.serial || '',
                         status: STATUS_CONFIG[item.status] ? item.status : '未採購',
+                        statusOwner: item.statusOwner || '',
                         applicant: item.applicant || '',
                         notes: item.notes || ''
                     }));
@@ -1765,6 +1781,7 @@
                     item.subProject.toLowerCase().includes(keyword) ||
                     item.item.toLowerCase().includes(keyword) ||
                     item.serial.toLowerCase().includes(keyword) ||
+                    (item.statusOwner || '').toLowerCase().includes(keyword) ||
                     item.applicant.toLowerCase().includes(keyword) ||
                     item.notes.toLowerCase().includes(keyword);
 
@@ -1844,6 +1861,12 @@
                             <span>${statusCfg.emoji}</span>
                             <span>${escapeHtml(item.status)}</span>
                         </span>
+                        ${item.statusOwner ? `
+                        <div class="text-[11px] font-bold text-slate-600 mt-1.5 flex items-center gap-1">
+                            <span>🧑‍💼</span>
+                            <span>${escapeHtml(item.statusOwner)}</span>
+                        </div>
+                        ` : ''}
                     </td>
 
                     <td class="py-4 px-4 align-top whitespace-nowrap">
@@ -1932,9 +1955,7 @@
                 const opt = document.createElement('option');
                 opt.value = sub;
                 opt.textContent = sub;
-                if (sub === selectedSubProject) {
-                    opt.selected = true;
-                }
+                if (sub === selectedSubProject) opt.selected = true;
                 subSelect.appendChild(opt);
             });
 
@@ -1944,6 +1965,24 @@
                 customOpt.textContent = selectedSubProject;
                 customOpt.selected = true;
                 subSelect.appendChild(customOpt);
+            }
+        }
+
+        function updateStatusOwnerRequirement() {
+            const status = document.getElementById('fieldStatus').value;
+            const ownerInput = document.getElementById('fieldStatusOwner');
+            const requiredMark = document.getElementById('statusOwnerRequiredMark');
+            const hint = document.getElementById('statusOwnerHint');
+
+            const isExempt = status === '未採購' || status === '結案';
+            if (isExempt) {
+                ownerInput.removeAttribute('required');
+                requiredMark.classList.add('hidden');
+                hint.textContent = '(選填)';
+            } else {
+                ownerInput.setAttribute('required', 'required');
+                requiredMark.classList.remove('hidden');
+                hint.textContent = '(必填)';
             }
         }
 
@@ -1967,6 +2006,7 @@
                 document.getElementById('fieldBudget').value = target.budget;
                 document.getElementById('fieldSerial').value = target.serial;
                 document.getElementById('fieldStatus').value = target.status;
+                document.getElementById('fieldStatusOwner').value = target.statusOwner || '';
                 document.getElementById('fieldApplicant').value = target.applicant;
                 document.getElementById('fieldNotes').value = target.notes;
             } else {
@@ -1975,6 +2015,7 @@
                 document.getElementById('caseId').value = '';
                 document.getElementById('fieldBudget').value = '150萬以下';
                 document.getElementById('fieldStatus').value = '未採購';
+                document.getElementById('fieldStatusOwner').value = '';
                 if (allowedScopes.length === 1) {
                     document.getElementById('fieldScope').value = allowedScopes[0];
                     updateSubProjectOptions('');
@@ -1984,6 +2025,7 @@
                 }
             }
 
+            updateStatusOwnerRequirement();
             modal.classList.remove('hidden');
         }
 
@@ -1994,6 +2036,14 @@
         function saveCase(event) {
             event.preventDefault();
 
+            const statusVal = document.getElementById('fieldStatus').value;
+            const statusOwnerVal = document.getElementById('fieldStatusOwner').value.trim();
+            if (statusVal !== '未採購' && statusVal !== '結案' && !statusOwnerVal) {
+                showToast(`狀態為「${statusVal}」時，請填寫狀態流程負責人！`, '⚠️');
+                document.getElementById('fieldStatusOwner').focus();
+                return;
+            }
+
             const id = document.getElementById('caseId').value;
             const caseData = {
                 id: id ? id : Date.now().toString(),
@@ -2002,7 +2052,8 @@
                 item: document.getElementById('fieldItem').value.trim(),
                 budget: document.getElementById('fieldBudget').value,
                 serial: document.getElementById('fieldSerial').value.trim(),
-                status: document.getElementById('fieldStatus').value,
+                status: statusVal,
+                statusOwner: statusOwnerVal,
                 applicant: document.getElementById('fieldApplicant').value.trim(),
                 notes: document.getElementById('fieldNotes').value.trim()
             };
@@ -2021,7 +2072,7 @@
                 auditEntry = appendAuditLog(
                     '新增',
                     caseData,
-                    `新增案件「${caseData.item}」（${caseData.scope} / ${caseData.subProject}，${caseData.budget}，狀態：${caseData.status}）`
+                    `新增案件「${caseData.item}」（${caseData.scope} / ${caseData.subProject}，${caseData.budget}，狀態：${caseData.status}${caseData.statusOwner ? `，負責人：${caseData.statusOwner}` : ''}）`
                 );
                 showToast('新採購案件已成功建立並寫入試算表！', '🎉');
             }
@@ -2093,6 +2144,7 @@
                 '採購金額': item.budget || '150萬以下',
                 '財添單序號': item.serial || '',
                 '目前狀態': item.status || '未採購',
+                '狀態流程負責人': item.statusOwner || '',
                 '申請人': item.applicant || '',
                 '調查記錄說明': item.notes || ''
             }));
@@ -2105,6 +2157,7 @@
                 { wch: 14 },
                 { wch: 18 },
                 { wch: 12 },
+                { wch: 16 },
                 { wch: 14 },
                 { wch: 42 }
             ];
@@ -2147,6 +2200,7 @@
                     '採購金額': '150萬以上',
                     '財添單序號': '115-P01-0999',
                     '目前狀態': '已送單',
+                    '狀態流程負責人': '採購組-王專員',
                     '申請人': '王大明 教授',
                     '調查記錄說明': '已完成規格審查，送交採購組辦理公開招標。'
                 },
@@ -2157,12 +2211,13 @@
                     '採購金額': '150萬以下',
                     '財添單序號': '115-P02-0888',
                     '目前狀態': '詢價中',
+                    '狀態流程負責人': '總務處-林小姐',
                     '申請人': '陳小華 老師',
                     '調查記錄說明': '已取得兩家廠商報價單，等待第三家報價。'
                 }
             ];
             const ws = XLSX.utils.json_to_sheet(templateData);
-            ws['!cols'] = [{ wch: 14 }, { wch: 18 }, { wch: 32 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 36 }];
+            ws['!cols'] = [{ wch: 14 }, { wch: 18 }, { wch: 32 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 36 }];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, '採購明細');
             XLSX.writeFile(wb, '深耕計畫採購案匯入範本.xlsx');
@@ -2201,6 +2256,7 @@
                                 budget: budget,
                                 serial: String(row['財添單序號'] || '').trim(),
                                 status: validStatus,
+                                statusOwner: String(row['狀態流程負責人'] || row['流程負責人'] || '').trim(),
                                 applicant: String(row['申請人'] || '').trim(),
                                 notes: String(row['調查記錄說明'] || row['備註'] || '').trim()
                             };
